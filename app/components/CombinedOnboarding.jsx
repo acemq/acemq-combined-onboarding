@@ -37,6 +37,22 @@ const PACKAGING_FORMAT_OPTIONS = [
   'VMware OVA',
 ];
 
+const BROKER_PACKAGING_OPTIONS = [
+  'RPM',
+  'DEB',
+  'tar.gz',
+  'Windows ZIP',
+  'OCI Image',
+  'Helm Chart',
+];
+
+const BROKER_INSTALL_TYPE_OPTIONS = [
+  'Migrating from an existing RabbitMQ environment',
+  'New installation',
+];
+
+const YES_NO_UNSURE = ['Yes', 'No', 'Not sure'];
+
 const SCHEDULING_OPTIONS = [
   'Fixed Reoccurring Time Slot',
   'Dynamically Scheduled Sessions',
@@ -99,9 +115,26 @@ function buildStepList(services) {
     list.push('license-usage');
     list.push('license-users');
   }
+  if (services.broker) {
+    list.push('broker-tech');
+    list.push('broker-golive');
+    list.push('broker-users');
+  }
   if (services.support) list.push('support-users');
   return list;
 }
+
+// Labels shown in each section header's "what's left" trail.
+const STEP_LABELS = {
+  'engagement':    'Engagement details',
+  'license-tech':  'License config',
+  'license-usage': 'License usage',
+  'license-users': 'License users',
+  'broker-tech':   'Broker environment',
+  'broker-golive': 'Go-live readiness',
+  'broker-users':  'Repo access',
+  'support-users': 'Support users',
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UI PRIMITIVES
@@ -566,7 +599,7 @@ export default function CombinedOnboarding() {
   const [phone, setPhone] = useState('');
 
   // ── Service Selection ──
-  const [services, setServices] = useState({ engagement: false, support: false, license: false });
+  const [services, setServices] = useState({ engagement: false, support: false, license: false, broker: false });
 
   // ── Engagement fields ──
   const participantsEditorRef = useRef(null);
@@ -588,6 +621,16 @@ export default function CombinedOnboarding() {
   const [comments, setComments] = useState('');
   const [portalEmails, setPortalEmails] = useState([]);
 
+  // ── AceMQ Broker fields ──
+  const brokerEmailsRef = useRef(null);
+  const [broker, setBroker] = useState({
+    cpuCoreCount: '', cpuCoreType: '', deploymentEnv: '', envUse: [], packaging: [],
+    installType: '', downtime: '', blueGreen: '', comments: '',
+  });
+  const [brokerUsers, setBrokerUsers] = useState([]);
+  const setB = (k, v) => setBroker(b => ({ ...b, [k]: v }));
+  const toggleB = (k, v) => setBroker(b => ({ ...b, [k]: b[k].includes(v) ? b[k].filter(x => x !== v) : [...b[k], v] }));
+
   // ── Support fields ──
   const [supportUsers, setSupportUsers] = useState([]);
 
@@ -607,6 +650,9 @@ export default function CombinedOnboarding() {
   const pct = formStepList.length > 1
     ? Math.round((formStepIdx / (formStepList.length - 1)) * 100)
     : 0;
+
+  const isLastStep = stepIdx === stepList.length - 1;
+  const remainingSteps = stepList.slice(stepIdx).map(s => STEP_LABELS[s]).filter(Boolean);
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -633,6 +679,8 @@ export default function CombinedOnboarding() {
     // Auto-flush any portal email typed but not yet confirmed (same pattern as above).
     const flushedEmail = portalEmailsRef.current?.tryFlushInput() ?? null;
     const allPortalEmails = flushedEmail ? [...portalEmails, flushedEmail] : portalEmails;
+    const flushedBrokerEmail = brokerEmailsRef.current?.tryFlushInput() ?? null;
+    const allBrokerUsers = flushedBrokerEmail ? [...brokerUsers, flushedBrokerEmail] : brokerUsers;
 
     setSubmitting(true);
     setProcessing(true);
@@ -658,6 +706,7 @@ export default function CombinedOnboarding() {
           comments,
           portalUsers: allPortalEmails,
           supportUsers,
+          broker: services.broker ? { ...broker, users: allBrokerUsers } : undefined,
         }),
       });
 
@@ -692,7 +741,7 @@ export default function CombinedOnboarding() {
     URL.revokeObjectURL(url);
   };
 
-  const anyServiceSelected = services.engagement || services.support || services.license;
+  const anyServiceSelected = services.engagement || services.support || services.license || services.broker;
 
   return (
     <div className="min-h-screen grid-bg flex flex-col relative">
@@ -751,15 +800,16 @@ export default function CombinedOnboarding() {
 
                 {/* Subtitle */}
                 <p className="text-[#666] text-[1.6rem] leading-[1.7] max-w-[46rem] mx-auto mb-[4rem]">
-                  Complete your engagement, support portal, and license setup in a single guided experience. You'll receive a branded PDF report on completion.
+                  Complete your engagement, support portal, license, and AceMQ Broker setup in a single guided experience. You'll receive a branded PDF report on completion.
                 </p>
 
                 {/* Feature tiles */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-[1.4rem] mb-[4.4rem]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1.4rem] mb-[4.4rem]">
                   {[
                     { icon: '🤝', title: 'Engagement', desc: 'Professional services, migrations & architecture' },
                     { icon: '🎫', title: 'Support Portal', desc: 'Submit & track RabbitMQ issues 24/7' },
                     { icon: '🔑', title: 'License Onboarding', desc: 'JFrog image access & portal provisioning' },
+                    { icon: '📦', title: 'AceMQ Broker', desc: 'LTS broker builds via JFrog repo access' },
                   ].map(({ icon, title, desc }) => (
                     <div key={title} className="border border-[rgba(0,0,0,0.08)] rounded-[1.4rem] bg-[#fafafa] px-[2rem] py-[2.4rem] flex flex-col items-center gap-[0.8rem]">
                       <span className="text-[2.8rem]">{icon}</span>
@@ -842,6 +892,13 @@ export default function CombinedOnboarding() {
                     title="License Onboarding"
                     desc="Provision your RabbitMQ license, JFrog image access, and portal users."
                   />
+                  <ServiceCheckbox
+                    checked={services.broker}
+                    onChange={e => setServices(s => ({ ...s, broker: e.target.checked }))}
+                    icon="📦"
+                    title="AceMQ Broker"
+                    desc="Get access to the AceMQ Broker — our patched, long-term-supported RabbitMQ distribution — through JFrog."
+                  />
                 </div>
                 <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
@@ -860,7 +917,7 @@ export default function CombinedOnboarding() {
                   label="Engagement Onboarding"
                   accent="#FF6600"
                   stepLabel="Section — Engagement"
-                  steps={['Engagement details', ...(services.license ? ['License config', 'License usage', 'License users'] : []), ...(services.support ? ['Support users'] : [])]}
+                  steps={remainingSteps}
                 />
                 <QHead>Tell us about your engagement</QHead>
                 <QSub>Help us understand your team, goals, and scheduling so we can hit the ground running.</QSub>
@@ -917,7 +974,7 @@ export default function CombinedOnboarding() {
                   rows={4}
                 />
 
-                {!stepList.includes('license-tech') && !stepList.includes('support-users') && submitError && (
+                {isLastStep && submitError && (
                   <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
                     {submitError}
                   </p>
@@ -925,7 +982,7 @@ export default function CombinedOnboarding() {
 
                 <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
-                  {(stepList.includes('license-tech') || stepList.includes('support-users')) ? (
+                  {!isLastStep ? (
                     <BtnOrange onClick={goNext} disabled={engagementParticipants.length === 0 || !schedulingPref}>
                       Continue →
                     </BtnOrange>
@@ -946,7 +1003,7 @@ export default function CombinedOnboarding() {
                   label="License Onboarding"
                   accent="#5bb8ad"
                   stepLabel="Section — License"
-                  steps={['Technical config', 'Usage & packaging', 'Portal users', ...((services.support || services.engagement) ? ['Support users'] : [])]}
+                  steps={remainingSteps}
                 />
                 <QHead>Technical configuration</QHead>
                 <QSub>This helps us deliver the right license for your infrastructure.</QSub>
@@ -1051,7 +1108,7 @@ export default function CombinedOnboarding() {
 
                 <EmailTagInput ref={portalEmailsRef} emails={portalEmails} setEmails={setPortalEmails} />
 
-                {!stepList.includes('support-users') && submitError && (
+                {isLastStep && submitError && (
                   <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
                     {submitError}
                   </p>
@@ -1059,7 +1116,134 @@ export default function CombinedOnboarding() {
 
                 <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
-                  {stepList.includes('support-users') ? (
+                  {!isLastStep ? (
+                    <BtnOrange onClick={goNext}>Continue →</BtnOrange>
+                  ) : (
+                    <BtnOrange onClick={handleSubmit} disabled={submitting}>
+                      {submitting ? 'Submitting…' : 'Submit & Get Report →'}
+                    </BtnOrange>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── ACEMQ BROKER — ENVIRONMENT ── */}
+            {currentStep === 'broker-tech' && !submitted && (
+              <div>
+                <SectionHeader
+                  icon="📦"
+                  label="AceMQ Broker Onboarding"
+                  accent="#c45200"
+                  stepLabel="Section — AceMQ Broker"
+                  steps={remainingSteps}
+                />
+                <QHead>Your broker environment</QHead>
+                <QSub>Tell us where the AceMQ Broker will run so we can give you the right builds.</QSub>
+
+                <div className="bg-[#fafafa] border border-[rgba(0,0,0,0.08)] rounded-[1rem] px-[1.6rem] py-[1.2rem] mb-[2rem]">
+                  <p className="text-[1.1rem] font-[700] text-[#999] uppercase tracking-[0.06em] mb-[0.2rem]">Product</p>
+                  <p className="text-[1.5rem] font-[700] text-[#161616]">AceMQ Broker <span className="text-[#999] font-[400] text-[1.3rem]">— current LTS release</span></p>
+                </div>
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[0.6rem]">CPU Core Count *</p>
+                <TF placeholder="e.g. 16" value={broker.cpuCoreCount} onChange={e => setB('cpuCoreCount', e.target.value)} />
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[0.6rem]">CPU Core Type *</p>
+                {['vCPU', 'Physical CPU'].map(opt => (
+                  <Choice key={opt} selected={broker.cpuCoreType === opt} onClick={() => setB('cpuCoreType', opt)}>{opt}</Choice>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Deployment Environment *</p>
+                {DEPLOYMENT_ENV_OPTIONS.map(opt => (
+                  <Choice key={opt} selected={broker.deploymentEnv === opt} onClick={() => setB('deploymentEnv', opt)}>{opt}</Choice>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Environment Use * <span className="text-[#999] font-[400]">(select all that apply)</span></p>
+                {ENVIRONMENT_USE_OPTIONS.map(opt => (
+                  <Chip key={opt} selected={broker.envUse.includes(opt)} onClick={() => toggleB('envUse', opt)}>{opt}</Chip>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2.4rem]">Packaging Format * <span className="text-[#999] font-[400]">(select all that apply)</span></p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem]">
+                  {BROKER_PACKAGING_OPTIONS.map(opt => (
+                    <Chip key={opt} selected={broker.packaging.includes(opt)} onClick={() => toggleB('packaging', opt)}>{opt}</Chip>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                  <BtnGhost onClick={goBack}>← Back</BtnGhost>
+                  <BtnOrange onClick={goNext} disabled={!broker.cpuCoreCount.trim() || !broker.cpuCoreType || !broker.deploymentEnv || broker.envUse.length === 0 || broker.packaging.length === 0}>
+                    Continue →
+                  </BtnOrange>
+                </div>
+              </div>
+            )}
+
+            {/* ── ACEMQ BROKER — GO-LIVE READINESS ── */}
+            {currentStep === 'broker-golive' && !submitted && (
+              <div>
+                <SectionLabel>AceMQ Broker Onboarding</SectionLabel>
+                <QHead>Go-live readiness</QHead>
+                <QSub>This helps us plan your installation or migration path.</QSub>
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Is this a migration or a new installation? *</p>
+                {BROKER_INSTALL_TYPE_OPTIONS.map(opt => (
+                  <Choice key={opt} selected={broker.installType === opt} onClick={() => setB('installType', opt)}>{opt}</Choice>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Can your environment support full downtime during cutover? *</p>
+                {YES_NO_UNSURE.map(opt => (
+                  <Choice key={opt} selected={broker.downtime === opt} onClick={() => setB('downtime', opt)}>{opt}</Choice>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Do you have multiple environments available for a blue/green migration? *</p>
+                {YES_NO_UNSURE.map(opt => (
+                  <Choice key={opt} selected={broker.blueGreen === opt} onClick={() => setB('blueGreen', opt)}>{opt}</Choice>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2.4rem]">Additional Comments <span className="text-[#999] font-[400]">(optional)</span></p>
+                <TA placeholder="Current RabbitMQ / Erlang versions, OS, cluster layout, timelines…" value={broker.comments} onChange={e => setB('comments', e.target.value)} />
+
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                  <BtnGhost onClick={goBack}>← Back</BtnGhost>
+                  <BtnOrange onClick={goNext} disabled={!broker.installType || !broker.downtime || !broker.blueGreen}>
+                    Continue →
+                  </BtnOrange>
+                </div>
+              </div>
+            )}
+
+            {/* ── ACEMQ BROKER — REPO ACCESS ── */}
+            {currentStep === 'broker-users' && !submitted && (
+              <div>
+                <SectionLabel>AceMQ Broker Onboarding</SectionLabel>
+                <QHead>Who needs repository access?</QHead>
+                <QSub>
+                  Add everyone who should be able to download AceMQ Broker builds. Your email{' '}
+                  <span className="text-[#FF6600]">{workEmail}</span> is included automatically.
+                </QSub>
+
+                <div className="bg-[#f8f8f8] border border-[rgba(0,0,0,0.08)] rounded-[1.4rem] p-[2rem] mb-[2.8rem]">
+                  <div className="flex items-start gap-[1.4rem]">
+                    <span className="text-[2.4rem] mt-[0.2rem] flex-shrink-0">📦</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[1.5rem] font-[700] text-[#161616] mb-[0.5rem]">JFrog access to the AceMQ Broker repository</p>
+                      <p className="text-[1.3rem] text-[#666] leading-[1.6]">Each person gets an AceMQ Artifactory login scoped to the AceMQ Broker repository only. New users receive a temporary password by email; existing users can sign in with their current credentials.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <EmailTagInput ref={brokerEmailsRef} emails={brokerUsers} setEmails={setBrokerUsers} />
+
+                {isLastStep && submitError && (
+                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
+                    {submitError}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                  <BtnGhost onClick={goBack}>← Back</BtnGhost>
+                  {!isLastStep ? (
                     <BtnOrange onClick={goNext}>Continue →</BtnOrange>
                   ) : (
                     <BtnOrange onClick={handleSubmit} disabled={submitting}>
@@ -1078,7 +1262,7 @@ export default function CombinedOnboarding() {
                   label="Support Portal Onboarding"
                   accent="#161616"
                   stepLabel="Section — Support"
-                  steps={['Support users']}
+                  steps={remainingSteps}
                 />
                 <QHead>Who needs support access?</QHead>
                 <QSub>
@@ -1130,6 +1314,12 @@ export default function CombinedOnboarding() {
                     <div className="flex items-center gap-[1.2rem] bg-[rgba(91,184,173,0.06)] border border-[rgba(91,184,173,0.2)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
                       <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(91,184,173,0.3)] border-t-[#5bb8ad] animate-spin flex-shrink-0" />
                       <span className="text-[1.4rem] text-[#444]">Provisioning JFrog access…</span>
+                    </div>
+                  )}
+                  {services.broker && (
+                    <div className="flex items-center gap-[1.2rem] bg-[rgba(196,82,0,0.05)] border border-[rgba(196,82,0,0.2)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
+                      <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(196,82,0,0.3)] border-t-[#c45200] animate-spin flex-shrink-0" />
+                      <span className="text-[1.4rem] text-[#444]">Granting AceMQ Broker repo access…</span>
                     </div>
                   )}
                   {services.support && (
@@ -1189,6 +1379,12 @@ export default function CombinedOnboarding() {
                       <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#444]">
                         <span className="text-[#FF6600] font-[700] flex-shrink-0">🔑</span>
                         <span>Your license configuration is being processed. JFrog access will be set up.</span>
+                      </div>
+                    )}
+                    {services.broker && (
+                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#444]">
+                        <span className="text-[#FF6600] font-[700] flex-shrink-0">📦</span>
+                        <span>AceMQ Broker repository credentials are being emailed to each user you listed.</span>
                       </div>
                     )}
                   </div>

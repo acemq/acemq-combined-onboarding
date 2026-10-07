@@ -134,6 +134,7 @@ async function submitHubSpotForm(submitter, company, services, extra = {}) {
     services.engagement && 'Engagement',
     services.license    && 'License',
     services.support    && 'Support',
+    services.broker     && 'AceMQ Broker',
   ].filter(Boolean).join(', ');
 
   const fields = [
@@ -171,6 +172,10 @@ async function submitHubSpotForm(submitter, company, services, extra = {}) {
   const messageParts = [];
   if (services.engagement && extra.engagementDescription) messageParts.push(`[Engagement]\n${extra.engagementDescription}`);
   if (services.license && extra.comments)                 messageParts.push(`[License]\n${extra.comments}`);
+  if (services.broker && extra.broker) {
+    const b = extra.broker;
+    messageParts.push(`[AceMQ Broker]\n${brokerRows(b).map(([l, v]) => `${l}: ${v}`).join('\n')}${b.users?.length ? `\nRepo Users: ${b.users.join(', ')}` : ''}${b.comments ? `\nComments: ${b.comments}` : ''}`);
+  }
   if (messageParts.length) fields.push({ name: 'message', value: messageParts.join('\n\n') });
 
   await fetch(
@@ -181,6 +186,23 @@ async function submitHubSpotForm(submitter, company, services, extra = {}) {
       body: JSON.stringify({ fields, context: { pageName: 'AceMQ Combined Onboarding' } }),
     }
   );
+}
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// [label, value] pairs describing an AceMQ Broker submission, in display order.
+function brokerRows(b) {
+  if (!b) return [];
+  return [
+    ['Product',            'AceMQ Broker (current LTS)'],
+    ['CPU Cores',          `${b.cpuCoreCount || ''} ${b.cpuCoreType || ''}`.trim()],
+    ['Deployment',         b.deploymentEnv],
+    ['Environment Use',    (b.envUse || []).join(', ')],
+    ['Packaging',          (b.packaging || []).join(', ')],
+    ['Install Type',       b.installType],
+    ['Can Take Downtime',  b.downtime],
+    ['Blue/Green Envs',    b.blueGreen],
+  ].filter(([, v]) => v);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -229,12 +251,13 @@ async function sendMailjetEmail({ toEmail, toName, subject, html, pdfBase64, pdf
 
 function buildNoteBody({ submitter, company, services,
   engagementParticipants, kickoffDate, teamTimezone, schedulingPref,
-  engagementDescription, technical, envUse, packaging, comments, portalUsers, supportUsers }) {
+  engagementDescription, technical, envUse, packaging, comments, portalUsers, supportUsers, broker }) {
 
   const selectedServices = [
     services.engagement && 'Engagement',
     services.license    && 'License',
     services.support    && 'Support',
+    services.broker     && 'AceMQ Broker',
   ].filter(Boolean).join(', ');
 
   let note = `AceMQ Combined Onboarding Submission\n`;
@@ -272,6 +295,14 @@ function buildNoteBody({ submitter, company, services,
     note += '\n';
   }
 
+  if (services.broker && broker) {
+    note += `--- ACEMQ BROKER ---\n`;
+    brokerRows(broker).forEach(([l, v]) => { note += `${l}: ${v}\n`; });
+    if (broker.users?.length) note += `Repo Users: ${broker.users.join(', ')}\n`;
+    if (broker.comments) note += `Comments: ${broker.comments}\n`;
+    note += '\n';
+  }
+
   if (services.support || services.engagement) {
     note += `--- SUPPORT USERS ---\n`;
     supportUsers?.forEach(u => {
@@ -293,6 +324,7 @@ function buildInternalEmailHtml({
   fusebaseResult, fusebaseError,
   jfrogResult, jfrogError,
   jsmResult, jsmError,
+  broker, brokerJfrogResult, brokerJfrogError,
   pdfGenerated,
 }) {
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -300,6 +332,7 @@ function buildInternalEmailHtml({
     services.engagement && '🤝 Engagement',
     services.license    && '🔑 License',
     services.support    && '🎫 Support',
+    services.broker     && '📦 AceMQ Broker',
   ].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
 
   const ok  = (label) => `<span style="display:inline-block;background:#d4edda;color:#155724;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">${label}</span>`;
@@ -448,7 +481,44 @@ function buildInternalEmailHtml({
     </div>`;
   }
 
-  const hasErrors = fusebaseError || jfrogError || jsmError;
+  // ── ACEMQ BROKER ──
+  if (services.broker) {
+    const status = brokerJfrogError ? err('Error') : brokerJfrogResult ? ok('Provisioned') : na('Skipped');
+    const users  = [...(brokerJfrogResult?.invited || []), ...(brokerJfrogResult?.updated || [])];
+    const userRows = users.map((e, i) => `
+      <tr style="${i % 2 === 0 ? '' : 'background:#f8f8f8;'}border-top:1px solid #eee;">
+        <td style="padding:6px 10px;font-size:12px;color:#FF6600;">${esc(e)}</td>
+        <td style="padding:6px 10px;font-size:11px;color:#666;">${brokerJfrogResult.invited.includes(e) ? '(invited — new account)' : '(added to group)'}</td>
+      </tr>`).join('');
+    const failRows = (brokerJfrogResult?.failed || []).map(f => `
+      <tr style="border-top:1px solid #eee;background:#fff5f5;"><td colspan="2" style="padding:6px 10px;font-size:12px;color:#721c24;">${esc(f)}</td></tr>`).join('');
+
+    sections += `
+    <div style="margin-bottom:28px;">
+      <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF6600;">📦 AceMQ Broker</p>
+      <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">JFrog Artifactory &nbsp;${status}</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:6px;">
+        ${row('Group', esc(brokerJfrogResult?.groupName || '—'), false)}
+        ${row('Permission Target', esc(brokerJfrogResult?.permName || '—'), true)}
+        ${brokerJfrogError ? row('Error', `<span style="color:#721c24;">${esc(brokerJfrogError)}</span>`, false) : ''}
+      </table>
+      ${users.length || failRows ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:10px;">
+        <tr style="background:#161616;">
+          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Email</td>
+          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Status</td>
+        </tr>
+        ${userRows}${failRows}
+      </table>` : ''}
+      <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">Environment &amp; Go-Live</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;">
+        ${brokerRows(broker).map(([l, v], i) => row(l, esc(v), i % 2 === 1)).join('')}
+        ${broker?.comments ? row('Comments', esc(broker.comments), false) : ''}
+      </table>
+    </div>`;
+  }
+
+  const hasErrors = fusebaseError || jfrogError || jsmError || brokerJfrogError;
 
   return `
 <!DOCTYPE html>
@@ -492,12 +562,13 @@ function buildInternalEmailHtml({
 }
 
 function buildCustomerEmailHtml({ submitter, company, services, engagementParticipants,
-  kickoffDate, teamTimezone, schedulingPref, technical, envUse, packaging, portalUsers, supportUsers }) {
+  kickoffDate, teamTimezone, schedulingPref, technical, envUse, packaging, portalUsers, supportUsers, broker }) {
 
   const svcList = [
     services.engagement && '🤝 Engagement',
     services.license    && '🔑 License',
     services.support    && '🎫 Support',
+    services.broker     && '📦 AceMQ Broker',
   ].filter(Boolean);
 
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -567,6 +638,26 @@ function buildCustomerEmailHtml({ submitter, company, services, engagementPartic
         ${portalRowsHtml}
       </table>` : ''}
       <p style="margin:12px 0 0;font-size:13px;color:#666;">Your JFrog Artifactory credentials will be emailed to each portal user shortly. A setup guide is attached to this email.</p>
+    </div>`;
+  }
+
+  if (services.broker && broker) {
+    const rowsHtml = brokerRows(broker).map(([l, v], i) => `
+      <tr style="${i > 0 ? 'border-top:1px solid #eee;' : ''}">
+        <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;width:38%;">${esc(l)}</td>
+        <td style="padding:8px 12px;font-size:13px;">${esc(v)}</td>
+      </tr>`).join('');
+    const users = [submitter.email, ...(broker.users || [])];
+
+    sectionsHtml += `
+    <div style="margin-bottom:28px;">
+      <p style="margin:0 0 8px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">AceMQ Broker</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:6px;overflow:hidden;margin-bottom:12px;">
+        ${rowsHtml}
+      </table>
+      <p style="margin:12px 0 6px;font-size:12px;font-weight:700;color:#161616;">Repository Access</p>
+      <p style="margin:0;font-size:13px;color:#FF6600;">${users.map(esc).join('<br>')}</p>
+      <p style="margin:12px 0 0;font-size:13px;color:#666;">Each person above will receive a separate email with their AceMQ Artifactory login for the AceMQ Broker repository.</p>
     </div>`;
   }
 
@@ -663,7 +754,7 @@ function toWinAnsi(str) {
   return String(str ?? '')
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
-    .replace(/[^\x00-\xFF]/g, '?');
+    .replace(/[^\x00-\xFF—–‘’“”•…€™]/g, '?'); // WinAnsi = Latin-1 + these cp1252 extras
 }
 
 function patchDrawText(page) {
@@ -675,7 +766,7 @@ function patchDrawText(page) {
 async function buildReportPdf({
   submitter, company, services,
   engagementParticipants, kickoffDate, teamTimezone, schedulingPref, timeSlotPref, engagementDescription,
-  technical, envUse, packaging, comments, portalUsers, supportUsers,
+  technical, envUse, packaging, comments, portalUsers, supportUsers, broker,
 }) {
   const doc     = await PDFDocument.create();
   const regular = await doc.embedFont(StandardFonts.Helvetica);
@@ -700,6 +791,7 @@ async function buildReportPdf({
     services.engagement && 'Engagement',
     services.license    && 'License',
     services.support    && 'Support',
+    services.broker     && 'AceMQ Broker',
   ].filter(Boolean);
 
   let page = patchDrawText(doc.addPage([W, H]));
@@ -918,6 +1010,29 @@ async function buildReportPdf({
     }
   }
 
+  // ── ACEMQ BROKER ──
+  if (services.broker && broker) {
+    drawSectionBanner(sn++, 'ACEMQ BROKER SETUP');
+    drawSectionHead('Environment & Go-Live Readiness');
+    drawKVTable(brokerRows(broker));
+
+    drawSubHead('Repository Access');
+    [submitter.email, ...(broker.users || [])].forEach((email, i) => {
+      ensureSpace(14);
+      if (i % 2 === 0) page.drawRectangle({ x: ML, y: y - 13, width: BW, height: 13, color: ROWALT });
+      page.drawLine({ start: { x: ML, y: y - 13 }, end: { x: ML + BW, y: y - 13 }, thickness: 0.4, color: BRDR });
+      page.drawText(email, { x: ML + 6, y: y - 8, font: regular, size: 8, color: DARK });
+      y -= 13;
+    });
+    y -= 8;
+    drawTextBlock('Each user receives an AceMQ Artifactory login (acemq.jfrog.io) scoped to the AceMQ Broker repository. New users get a temporary password by email and are prompted to change it on first login.');
+
+    if (broker.comments?.trim()) {
+      drawSubHead('Additional Comments');
+      drawTextBlock(broker.comments);
+    }
+  }
+
   // ── SUPPORT ──
   if (services.support) {
     drawSectionBanner(sn++, 'SUPPORT SETUP');
@@ -973,6 +1088,18 @@ const JFROG_REPOS = [
   'rabbitmq-operator-docker-remote',
 ];
 
+// license: per-company group + permission over the Tanzu/OSS repos.
+// broker:  one shared, pre-built group in the "AceMQ Broker" JFrog project. Its permission
+//          (acemq-broker-customer-read, managed in JFrog) grants read on
+//          acemq-broker-releases-local + acemq-broker-docker-local only — staging stays hidden.
+const JFROG_PRODUCTS = {
+  license: { label: 'RabbitMQ license', groupPrefix: 'customer', permSuffix: 'rmq-access', repos: JFROG_REPOS, actions: ['read', 'write'], attachGuide: true },
+  broker:  { label: 'AceMQ Broker', sharedGroup: 'acemq-broker-customers', sharedPerm: 'acemq-broker-customer-read', attachGuide: false },
+};
+
+const MAX_JFROG_USERS = 25;
+const EMAIL_RE = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
+
 function slugifyCompany(name) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -1003,8 +1130,7 @@ async function ensureJFrogGroup(groupName) {
   return true; // newly created
 }
 
-async function ensureJFrogPermission(slug, groupName) {
-  const permName = `perm-${slug}-rmq-access`;
+async function ensureJFrogPermission(permName, groupName, product) {
   const { status } = await jfrog('GET', `/artifactory/api/v2/security/permissions/${encodeURIComponent(permName)}`);
   if (status === 200) return false; // already existed
 
@@ -1013,10 +1139,10 @@ async function ensureJFrogPermission(slug, groupName) {
     repo: {
       actions: {
         groups: {
-          [groupName]: ['read', 'write'],
+          [groupName]: product.actions,
         },
       },
-      repositories: JFROG_REPOS,
+      repositories: product.repos,
       'include-patterns': ['**'],
       'exclude-patterns': [],
     },
@@ -1024,7 +1150,7 @@ async function ensureJFrogPermission(slug, groupName) {
   return true; // newly created
 }
 
-async function sendJFrogInviteEmail(email, tempPwd, company) {
+async function sendJFrogInviteEmail(email, tempPwd, company, product) {
   // tempPwd is null for existing JFrog users — they get access notification without credentials.
   const credRows = tempPwd ? `
           <tr style="border-top:1px solid #eee;">
@@ -1041,11 +1167,11 @@ async function sendJFrogInviteEmail(email, tempPwd, company) {
         <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:1px;">AceMQ</span>
       </div>
       <div style="padding:32px;">
-        <h2 style="margin:0 0 16px;font-size:22px;">Your RabbitMQ Artifact Access is Ready</h2>
+        <h2 style="margin:0 0 16px;font-size:22px;">Your ${product.label} Artifact Access is Ready</h2>
         <p style="margin:0 0 20px;line-height:1.6;">
           Your account on the AceMQ JFrog Artifactory platform has been provisioned as part of
-          the <strong>${company}</strong> license onboarding. You now have access to the
-          AceMQ RabbitMQ repositories.
+          the <strong>${company}</strong> ${product.label} onboarding. You now have access to the
+          ${product.label} repositories.
         </p>
         <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#f8f8f8;border-radius:6px;">
           <tr>
@@ -1071,7 +1197,7 @@ async function sendJFrogInviteEmail(email, tempPwd, company) {
     </div>`;
 
   let guidePdf = null;
-  try {
+  if (product.attachGuide) try {
     const guidePath = path.join(process.cwd(), 'public', 'AceMQ-JFrog-RabbitMQ-Pull-Guide.pdf');
     guidePdf = fs.readFileSync(guidePath).toString('base64');
   } catch (_) {}
@@ -1079,27 +1205,27 @@ async function sendJFrogInviteEmail(email, tempPwd, company) {
   await sendMailjetEmail({
     toEmail:     email,
     toName:      email,
-    subject:     'Your AceMQ RabbitMQ Artifact Access is Ready',
+    subject:     `Your ${product.label} Artifact Access is Ready`,
     html,
     pdfBase64:   guidePdf,
     pdfFilename: 'AceMQ-JFrog-RabbitMQ-Pull-Guide.pdf',
   });
 }
 
-async function provisionJFrogUser(email, groupName, company) {
+async function provisionJFrogUser(email, groupName, company, product) {
   const username = email.toLowerCase().trim();
-  const { status, data } = await jfrog('GET', `/access/api/v2/users/${username}`);
+  const { status, data } = await jfrog('GET', `/access/api/v2/users/${encodeURIComponent(username)}`);
 
   if (status === 200) {
     // User exists — add to group (merge with existing groups)
     const existingGroups = data.groups || [];
     const groups = [...new Set([...existingGroups, groupName])];
-    const patchRes = await jfrog('PATCH', `/access/api/v2/users/${username}`, { groups });
+    const patchRes = await jfrog('PATCH', `/access/api/v2/users/${encodeURIComponent(username)}`, { groups });
     if (patchRes.status >= 400) {
       throw new Error(`PATCH failed (${patchRes.status}): ${JSON.stringify(patchRes.data)}`);
     }
     // Existing users still need the access email + pull guide — they're getting new repo access
-    await sendJFrogInviteEmail(username, null, company);
+    await sendJFrogInviteEmail(username, null, company, product);
     return 'updated';
   } else {
     // New user — create with a temporary password and send credentials via email
@@ -1116,7 +1242,7 @@ async function provisionJFrogUser(email, groupName, company) {
     if (createRes.status >= 400) {
       throw new Error(`Create user failed (${createRes.status}): ${JSON.stringify(createRes.data)}`);
     }
-    await sendJFrogInviteEmail(username, tempPwd, company);
+    await sendJFrogInviteEmail(username, tempPwd, company, product);
     return 'invited';
   }
 }
@@ -1315,18 +1441,25 @@ async function provisionFuseBasePortal({ company, engagementParticipants, submit
   return { domain, workspaceId: ws.id, portalId: portal.id, usersInvited: invitations.length };
 }
 
-async function provisionJFrogAccess({ company, submitterEmail, portalUsers }) {
+async function provisionJFrogAccess({ company, submitterEmail, portalUsers, kind = 'license' }) {
+  const product   = JFROG_PRODUCTS[kind];
   const slug      = slugifyCompany(company);
-  const groupName = `customer-${slug}`;
+  const groupName = product.sharedGroup || `${product.groupPrefix}-${slug}`;
+  const permName  = product.sharedPerm  || `perm-${slug}-${product.permSuffix}`;
 
-  // Group must exist before creating the permission target that references it
-  const groupCreated = await ensureJFrogGroup(groupName);
-  const permCreated  = await ensureJFrogPermission(slug, groupName);
+  // Shared groups are managed in JFrog; per-company ones are created here.
+  // Group must exist before creating the permission target that references it.
+  const groupCreated = product.sharedGroup ? false : await ensureJFrogGroup(groupName);
+  const permCreated  = product.sharedGroup ? false : await ensureJFrogPermission(permName, groupName, product);
 
-  const emails  = [...new Set([submitterEmail, ...(portalUsers || [])])].filter(Boolean);
-  const results = await Promise.allSettled(emails.map(e => provisionJFrogUser(e, groupName, company)));
+  // Emails become JFrog usernames and URL segments — reject anything that isn't a plain address.
+  const all     = [...new Set([submitterEmail, ...(portalUsers || [])].map(e => String(e || '').toLowerCase().trim()))].filter(Boolean);
+  const emails  = all.filter(e => EMAIL_RE.test(e));
+  // Public form: cap how many accounts + emails one submission can create.
+  if (emails.length > MAX_JFROG_USERS) throw new Error(`Too many users (${emails.length}); max ${MAX_JFROG_USERS} per submission`);
+  const results = await Promise.allSettled(emails.map(e => provisionJFrogUser(e, groupName, company, product)));
 
-  const invited = [], updated = [], failed = [];
+  const invited = [], updated = [], failed = all.filter(e => !EMAIL_RE.test(e)).map(e => `${e}: invalid email`);
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') {
       (r.value === 'invited' ? invited : updated).push(emails[i]);
@@ -1335,7 +1468,7 @@ async function provisionJFrogAccess({ company, submitterEmail, portalUsers }) {
     }
   });
 
-  return { groupName, permName: `perm-${slug}-rmq-access`, groupCreated, permCreated, invited, updated, failed };
+  return { groupName, permName, groupCreated, permCreated, invited, updated, failed };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1386,7 +1519,7 @@ export async function POST(request) {
       submitter, company, services,
       engagementParticipants,
       kickoffDate, teamTimezone, schedulingPref, timeSlotPref, engagementDescription,
-      technical, envUse, packaging, comments, portalUsers, supportUsers,
+      technical, envUse, packaging, comments, portalUsers, supportUsers, broker,
     } = body;
 
     if (!submitter?.email || !company) {
@@ -1410,7 +1543,7 @@ export async function POST(request) {
         const noteBody = buildNoteBody({
           submitter, company, services,
           engagementParticipants, kickoffDate, teamTimezone, schedulingPref,
-          engagementDescription, technical, envUse, packaging, comments, portalUsers, supportUsers,
+          engagementDescription, technical, envUse, packaging, comments, portalUsers, supportUsers, broker,
         });
 
         if (contactId) {
@@ -1419,7 +1552,7 @@ export async function POST(request) {
 
         await submitHubSpotForm(submitter, company, services, {
           technical, envUse, packaging, portalUsers, comments,
-          kickoffDate, teamTimezone, schedulingPref, engagementDescription,
+          kickoffDate, teamTimezone, schedulingPref, engagementDescription, broker,
         });
       } catch (hsErr) {
         console.error('HubSpot error:', hsErr);
@@ -1434,7 +1567,7 @@ export async function POST(request) {
       pdfBuffer = await buildReportPdf({
         submitter, company, services,
         engagementParticipants, kickoffDate, teamTimezone, schedulingPref, timeSlotPref, engagementDescription,
-        technical, envUse, packaging, comments, portalUsers, supportUsers,
+        technical, envUse, packaging, comments, portalUsers, supportUsers, broker,
       });
       pdfBase64 = pdfBuffer.toString('base64');
     } catch (pdfErr) {
@@ -1462,7 +1595,7 @@ export async function POST(request) {
         html:        buildCustomerEmailHtml({
           submitter, company, services,
           engagementParticipants, kickoffDate, teamTimezone, schedulingPref,
-          technical, envUse, packaging, portalUsers, supportUsers,
+          technical, envUse, packaging, portalUsers, supportUsers, broker,
         }),
         attachments: customerAtts,
       });
@@ -1477,6 +1610,7 @@ export async function POST(request) {
     let jfrogResult    = null, jfrogError    = null;
     let jsmResult      = null, jsmError      = null;
     let clickupResult  = null, clickupError  = null;
+    let brokerJfrogResult = null, brokerJfrogError = null;
 
     // ClickUp — move/create the onboarding pipeline task for each selected service
     if (CLICKUP_TOKEN) {
@@ -1524,6 +1658,24 @@ export async function POST(request) {
       }
     }
 
+    // JFrog — AceMQ Broker repo access (separate group + permission from licensing)
+    if (services.broker && JFROG_TOKEN) {
+      try {
+        brokerJfrogResult = await provisionJFrogAccess({
+          company,
+          submitterEmail: submitter.email,
+          portalUsers: broker?.users || [],
+          kind: 'broker',
+        });
+        brokerJfrogResult.failed.forEach(f => errors.push(`JFrog Broker: ${f}`));
+        console.log(`JFrog Broker: group=${brokerJfrogResult.groupName} invited=${brokerJfrogResult.invited.length} updated=${brokerJfrogResult.updated.length} failed=${brokerJfrogResult.failed.length}`);
+      } catch (bjErr) {
+        console.error('JFrog broker provisioning error:', bjErr);
+        brokerJfrogError = bjErr.message;
+        errors.push(`JFrog Broker: ${bjErr.message}`);
+      }
+    }
+
     // JSM — support + license portal access
     if ((services.license || services.support) && JIRA_API_TOKEN) {
       try {
@@ -1547,6 +1699,7 @@ export async function POST(request) {
         services.engagement && 'Engagement',
         services.license    && 'License',
         services.support    && 'Support',
+        services.broker     && 'AceMQ Broker',
       ].filter(Boolean).join(' + ');
 
       await sendMailjetEmail({
@@ -1560,6 +1713,7 @@ export async function POST(request) {
           fusebaseResult, fusebaseError,
           jfrogResult, jfrogError,
           jsmResult, jsmError,
+          broker, brokerJfrogResult, brokerJfrogError,
           pdfGenerated: !!pdfBase64,
         }),
         pdfBase64,
