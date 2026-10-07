@@ -624,7 +624,7 @@ export default function CombinedOnboarding() {
   // ── AceMQ Broker fields ──
   const brokerEmailsRef = useRef(null);
   const [broker, setBroker] = useState({
-    cpuCoreCount: '', cpuCoreType: '', deploymentEnv: '', envUse: [], packaging: [],
+    deploymentEnv: '', envUse: [], packaging: [],
     installType: '', downtime: '', blueGreen: '', comments: '',
   });
   const [brokerUsers, setBrokerUsers] = useState([]);
@@ -1145,15 +1145,7 @@ export default function CombinedOnboarding() {
                   <p className="text-[1.5rem] font-[700] text-[#161616]">AceMQ Broker <span className="text-[#999] font-[400] text-[1.3rem]">— current LTS release</span></p>
                 </div>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[0.6rem]">CPU Core Count *</p>
-                <TF placeholder="e.g. 16" value={broker.cpuCoreCount} onChange={e => setB('cpuCoreCount', e.target.value)} />
-
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[0.6rem]">CPU Core Type *</p>
-                {['vCPU', 'Physical CPU'].map(opt => (
-                  <Choice key={opt} selected={broker.cpuCoreType === opt} onClick={() => setB('cpuCoreType', opt)}>{opt}</Choice>
-                ))}
-
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Deployment Environment *</p>
+                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Deployment Environment *</p>
                 {DEPLOYMENT_ENV_OPTIONS.map(opt => (
                   <Choice key={opt} selected={broker.deploymentEnv === opt} onClick={() => setB('deploymentEnv', opt)}>{opt}</Choice>
                 ))}
@@ -1172,7 +1164,7 @@ export default function CombinedOnboarding() {
 
                 <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
-                  <BtnOrange onClick={goNext} disabled={!broker.cpuCoreCount.trim() || !broker.cpuCoreType || !broker.deploymentEnv || broker.envUse.length === 0 || broker.packaging.length === 0}>
+                  <BtnOrange onClick={goNext} disabled={!broker.deploymentEnv || broker.envUse.length === 0 || broker.packaging.length === 0}>
                     Continue →
                   </BtnOrange>
                 </div>

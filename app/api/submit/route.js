@@ -195,7 +195,6 @@ function brokerRows(b) {
   if (!b) return [];
   return [
     ['Product',            'AceMQ Broker (current LTS)'],
-    ['CPU Cores',          `${b.cpuCoreCount || ''} ${b.cpuCoreType || ''}`.trim()],
     ['Deployment',         b.deploymentEnv],
     ['Environment Use',    (b.envUse || []).join(', ')],
     ['Packaging',          (b.packaging || []).join(', ')],
