@@ -314,6 +314,117 @@ function buildNoteBody({ submitter, company, services,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Email brand kit ("ace26"). Table layout + inline CSS only, no SVG / web fonts,
+// 600px max, safe for Gmail and Outlook. Shared by every outgoing email.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const EM = {
+  ink: '#121316', body: '#1F2125', sec: '#5F6670', muted: '#757B85',
+  hair: '#E9EBEE', ctl: '#DDE0E4', alt: '#F6F6F7', s2: '#FAFAFB',
+  orange: '#FF6600', accent: '#BF4D00', tint: '#FFF5EC', tint2: '#FFE8D6',
+  tealText: '#236B61', tealTint: '#E3F4F1',
+  red: '#C0392B', redText: '#9B2C1F', redTint: '#FDECEA',
+};
+const EM_FONT = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
+const EMF = `font-family:${EM_FONT};`;
+const EM_LOGO = 'https://onboarding.acemq.com/redesign/logo.png';
+const EM_TBL = 'role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"';
+
+// Vertical spacer (table based so Outlook honours it).
+const emGap = (n) => `<table ${EM_TBL}><tr><td height="${n}" style="height:${n}px;line-height:${n}px;font-size:0;mso-line-height-rule:exactly;">&nbsp;</td></tr></table>`;
+
+// Eyebrow: 24px orange dash + uppercase 12px accent label.
+const emEyebrow = (text) => `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td width="24" valign="middle" style="width:24px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="24"><tr><td height="2" bgcolor="${EM.orange}" style="height:2px;line-height:2px;font-size:0;mso-line-height-rule:exactly;background:${EM.orange};">&nbsp;</td></tr></table></td>
+  <td valign="middle" style="padding-left:10px;${EMF}font-size:12px;line-height:16px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:${EM.accent};">${text}</td>
+</tr></table>`;
+
+const emH1 = (html, size = 30) => `<h1 style="margin:0;${EMF}font-size:${size}px;line-height:1.15;font-weight:800;letter-spacing:-0.02em;color:${EM.ink};">${html}</h1>`;
+const emSub = (html) => `<p style="margin:0 0 8px;${EMF}font-size:14px;line-height:20px;font-weight:700;letter-spacing:-0.005em;color:${EM.ink};">${html}</p>`;
+const emDivider = () => `${emGap(28)}<table ${EM_TBL}><tr><td height="1" bgcolor="${EM.hair}" style="height:1px;line-height:1px;font-size:0;background:${EM.hair};">&nbsp;</td></tr></table>${emGap(28)}`;
+
+// Section label row: eyebrow on the left, optional status pill on the right.
+const emSectionHead = (label, statusHtml) => `
+<table ${EM_TBL}><tr>
+  <td valign="middle">${emEyebrow(label)}</td>
+  ${statusHtml ? `<td valign="middle" align="right" style="${EMF}">${statusHtml}</td>` : ''}
+</tr></table>`;
+
+const emPill = (label, bg, fg) => `<span style="display:inline-block;background:${bg};color:${fg};border-radius:999px;padding:3px 10px;${EMF}font-size:11px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">${label}</span>`;
+
+// Hairline data table wrapper + header / cell helpers.
+const emTable = (inner) => `<table ${EM_TBL} style="border-collapse:collapse;border-top:1px solid ${EM.hair};">${inner}</table>`;
+const emHead = (labels) => `<tr>${labels.map(l => `<td valign="bottom" style="padding:10px 12px 10px 0;border-bottom:1px solid ${EM.ctl};${EMF}font-size:11px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${EM.muted};">${l}</td>`).join('')}</tr>`;
+const emTd = (html, extra = '') => `<td valign="top" style="padding:10px 12px 10px 0;border-bottom:1px solid ${EM.hair};${EMF}font-size:13px;line-height:19px;color:${EM.ink};word-break:break-word;${extra}">${html}</td>`;
+const emAccent = `color:${EM.accent};`;
+
+// Soft tile (rounded, hairline border, very faint fill) around a nested key/value table.
+const emTile = (inner) => `
+<table ${EM_TBL} bgcolor="${EM.s2}" style="background:${EM.s2};border:1px solid ${EM.hair};border-radius:12px;border-collapse:separate;border-spacing:0;">
+  <tr><td style="padding:4px 20px;"><table ${EM_TBL} style="border-collapse:collapse;">${inner}</table></td></tr>
+</table>`;
+
+const emCallout = (inner) => `
+<table ${EM_TBL} bgcolor="${EM.tint}" style="background:${EM.tint};border:1px solid ${EM.tint2};border-radius:12px;border-collapse:separate;border-spacing:0;">
+  <tr><td style="padding:16px 20px;${EMF}font-size:14px;line-height:22px;color:${EM.body};">${inner}</td></tr>
+</table>`;
+
+// Bulletproof orange pill button.
+const emButton = (href, label) => `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td bgcolor="${EM.orange}" style="background:${EM.orange};border-radius:999px;">
+    <a href="${href}" style="display:inline-block;padding:13px 28px;${EMF}font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px;">${label}</a>
+  </td>
+</tr></table>`;
+
+// Footer: hairline, small secondary text, accent links. `lines` = array of HTML strings.
+const emFooter = (lines) => `
+<tr><td class="px" style="padding:0 40px 32px;">
+  <table ${EM_TBL}>
+    <tr><td height="1" bgcolor="${EM.hair}" style="height:1px;line-height:1px;font-size:0;background:${EM.hair};">&nbsp;</td></tr>
+    <tr><td style="padding-top:18px;${EMF}font-size:12px;line-height:19px;color:${EM.sec};">${lines.join('<br>')}</td></tr>
+  </table>
+</td></tr>`;
+const emLink = (href, text) => `<a href="${href}" style="color:${EM.accent};text-decoration:none;">${text}</a>`;
+
+// Page chrome: grey page, white hairline card, 3px orange top rule, logo header row.
+function emShell({ body, footerLines, ruleColor = EM.orange }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>AceMQ</title>
+<style>@media only screen and (max-width:620px){.px{padding-left:22px!important;padding-right:22px!important;}}</style>
+</head>
+<body style="margin:0;padding:0;background:${EM.alt};${EMF}color:${EM.body};-webkit-text-size-adjust:100%;">
+<table ${EM_TBL} bgcolor="${EM.alt}" style="background:${EM.alt};">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
+      <tr><td bgcolor="#ffffff" style="background:#ffffff;border:1px solid ${EM.hair};border-radius:20px;overflow:hidden;box-shadow:0 1px 2px rgba(18,19,22,.04),0 8px 24px rgba(18,19,22,.04);">
+        <table ${EM_TBL}>
+          <tr><td height="3" bgcolor="${ruleColor}" style="height:3px;line-height:3px;font-size:0;mso-line-height-rule:exactly;background:${ruleColor};">&nbsp;</td></tr>
+          <tr><td class="px" style="padding:24px 40px;border-bottom:1px solid ${EM.hair};">
+            <table ${EM_TBL}><tr>
+              <td valign="middle"><img src="${EM_LOGO}" width="113" height="31" alt="AceMQ" style="display:block;border:0;"></td>
+              <td valign="middle" align="right" style="${EMF}font-size:11px;line-height:16px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:${EM.muted};">THE #1 RABBITMQ PARTNER</td>
+            </tr></table>
+          </td></tr>
+          ${body}
+          ${emFooter(footerLines)}
+        </table>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Internal team email — comprehensive provisioning summary
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -335,14 +446,15 @@ function buildInternalEmailHtml({
     services.broker     && '📦 AceMQ Broker',
   ].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
 
-  const ok  = (label) => `<span style="display:inline-block;background:#d4edda;color:#155724;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">${label}</span>`;
-  const err = (label) => `<span style="display:inline-block;background:#f8d7da;color:#721c24;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">${label}</span>`;
-  const na  = (label) => `<span style="display:inline-block;background:#e9ecef;color:#6c757d;border-radius:4px;padding:1px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">${label}</span>`;
+  const ok  = (label) => emPill(label, EM.tealTint, EM.tealText);
+  const err = (label) => emPill(label, EM.redTint, EM.redText);
+  const na  = (label) => emPill(label, EM.alt, EM.sec);
 
-  const row = (label, value, alt) => `
-    <tr style="${alt ? 'background:#f8f8f8;' : ''}border-top:1px solid #eee;">
-      <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;width:38%;white-space:nowrap;">${label}</td>
-      <td style="padding:8px 12px;font-size:13px;color:#161616;">${value}</td>
+  // `alt` is kept for call-site compatibility; the brand kit uses hairlines, not zebra fills.
+  const row = (label, value, alt, noLine) => `
+    <tr>
+      <td valign="top" style="padding:11px 16px 11px 0;${noLine ? '' : `border-bottom:1px solid ${EM.hair};`}${EMF}font-size:11px;line-height:20px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${EM.muted};width:38%;">${label}</td>
+      <td valign="top" style="padding:11px 0;${noLine ? '' : `border-bottom:1px solid ${EM.hair};`}${EMF}font-size:14px;line-height:20px;color:${EM.ink};word-break:break-word;">${value}</td>
     </tr>`;
 
   let sections = '';
@@ -352,38 +464,32 @@ function buildInternalEmailHtml({
     const status = fusebaseError ? err('Error') : fusebaseResult ? ok('Provisioned') : na('Skipped');
     const leadRow = { firstName: submitter.firstName, lastName: submitter.lastName, title: submitter.jobTitle || '', email: submitter.email, role: 'Lead Stakeholder' };
     const allParticipants = [leadRow, ...(engagementParticipants || [])];
-    const participantRows = allParticipants.map((p, i) => `
-      <tr style="${i % 2 === 0 ? '' : 'background:#f8f8f8;'}border-top:1px solid #eee;">
-        <td style="padding:6px 10px;font-size:12px;">${p.firstName || ''} ${p.lastName || ''}</td>
-        <td style="padding:6px 10px;font-size:12px;color:#666;">${p.title || p.jobTitle || '—'}</td>
-        <td style="padding:6px 10px;font-size:12px;color:#FF6600;">${p.email}</td>
-        <td style="padding:6px 10px;font-size:12px;">${p.role || '—'}</td>
+    const participantRows = allParticipants.map((p) => `
+      <tr>
+        ${emTd(`${p.firstName || ''} ${p.lastName || ''}`)}
+        ${emTd(p.title || p.jobTitle || '—', `color:${EM.sec};`)}
+        ${emTd(String(p.email).replace('@', '@<wbr>'), emAccent)}
+        ${emTd(p.role || '—')}
       </tr>`).join('');
 
-    sections += `
-    <div style="margin-bottom:28px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <p style="margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF6600;">🤝 Engagement</p>
-        &nbsp;${status}
-      </div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:10px;">
-        ${row('Portal Domain', fusebaseResult ? `<a href="https://${fusebaseResult.domain}" style="color:#FF6600;">${fusebaseResult.domain}</a>` : '—', false)}
+    sections += `${sections ? emDivider() : ''}
+    <div>
+      ${emSectionHead('🤝 Engagement', status)}
+      ${emGap(12)}
+      ${emTable(`
+        ${row('Portal Domain', fusebaseResult ? `<a href="https://${fusebaseResult.domain}" style="color:${EM.accent};text-decoration:none;">${fusebaseResult.domain}</a>` : '—', false)}
         ${row('Users Invited', fusebaseResult ? String(fusebaseResult.usersInvited) : '—', true)}
         ${kickoffDate ? row('Kickoff Date', kickoffDate, false) : ''}
         ${teamTimezone ? row('Timezone', teamTimezone, true) : ''}
         ${schedulingPref ? row('Scheduling', schedulingPref, false) : ''}
-        ${fusebaseError ? row('Error', `<span style="color:#721c24;">${fusebaseError}</span>`, true) : ''}
-      </table>
-      <p style="margin:6px 0 4px;font-size:12px;font-weight:700;color:#161616;">Participants (${allParticipants.length})</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:6px;overflow:hidden;">
-        <tr style="background:#161616;">
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Name</td>
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Title</td>
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Email</td>
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Role</td>
-        </tr>
+        ${fusebaseError ? row('Error', `<span style="color:${EM.redText};">${fusebaseError}</span>`, true) : ''}
+      `)}
+      ${emGap(22)}
+      ${emSub(`Participants (${allParticipants.length})`)}
+      ${emTable(`
+        ${emHead(['Name', 'Title', 'Email', 'Role'])}
         ${participantRows}
-      </table>
+      `)}
     </div>`;
   }
 
@@ -393,91 +499,84 @@ function buildInternalEmailHtml({
     const jsmStatus   = jsmError   ? err('Error') : jsmResult   ? ok('Provisioned') : na('Skipped');
 
     const allJFrogUsers = [...(jfrogResult?.invited || []), ...(jfrogResult?.updated || [])];
-    const jfrogUserRows = allJFrogUsers.map((e, i) => `
-      <tr style="${i % 2 === 0 ? '' : 'background:#f8f8f8;'}border-top:1px solid #eee;">
-        <td style="padding:6px 10px;font-size:12px;color:#FF6600;">${e}</td>
-        <td style="padding:6px 10px;font-size:11px;color:#666;">${jfrogResult?.invited?.includes(e) ? '(invited — new account)' : '(added to group)'}</td>
+    const jfrogUserRows = allJFrogUsers.map((e) => `
+      <tr>
+        ${emTd(e, emAccent)}
+        ${emTd(jfrogResult?.invited?.includes(e) ? '(invited — new account)' : '(added to group)', `font-size:12px;color:${EM.sec};`)}
       </tr>`).join('');
     const jfrogFailRows = (jfrogResult?.failed || []).map(f => `
-      <tr style="border-top:1px solid #eee;background:#fff5f5;">
-        <td colspan="2" style="padding:6px 10px;font-size:12px;color:#721c24;">${f}</td>
-      </tr>`).join('');
+      <tr><td colspan="2" style="padding:10px 12px;border-bottom:1px solid ${EM.hair};background:${EM.redTint};${EMF}font-size:13px;line-height:19px;color:${EM.redText};">${f}</td></tr>`).join('');
 
-    sections += `
-    <div style="margin-bottom:28px;">
-      <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF6600;">🔑 License</p>
+    sections += `${sections ? emDivider() : ''}
+    <div>
+      ${emSectionHead('🔑 License')}
+      ${emGap(14)}
 
       <!-- JFrog -->
-      <div style="margin-bottom:12px;">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">JFrog Artifactory &nbsp;${jfrogStatus}</p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:6px;">
-          ${row('Group', jfrogResult?.groupName || '—', false)}
-          ${row('Permission Target', jfrogResult?.permName || '—', true)}
-          ${row('Group Created', jfrogResult ? (jfrogResult.groupCreated ? 'Yes (new)' : 'No (existing)') : '—', false)}
-          ${row('Perm Created', jfrogResult ? (jfrogResult.permCreated ? 'Yes (new)' : 'No (existing)') : '—', true)}
-          ${jfrogError ? row('Error', `<span style="color:#721c24;">${jfrogError}</span>`, false) : ''}
-        </table>
-        ${allJFrogUsers.length > 0 ? `
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:6px;overflow:hidden;">
-          <tr style="background:#161616;">
-            <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Email</td>
-            <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Status</td>
-          </tr>
-          ${jfrogUserRows}
-          ${jfrogFailRows}
-        </table>` : ''}
-      </div>
+      ${emSub(`JFrog Artifactory &nbsp;${jfrogStatus}`)}
+      ${emTable(`
+        ${row('Group', jfrogResult?.groupName || '—', false)}
+        ${row('Permission Target', jfrogResult?.permName || '—', true)}
+        ${row('Group Created', jfrogResult ? (jfrogResult.groupCreated ? 'Yes (new)' : 'No (existing)') : '—', false)}
+        ${row('Perm Created', jfrogResult ? (jfrogResult.permCreated ? 'Yes (new)' : 'No (existing)') : '—', true)}
+        ${jfrogError ? row('Error', `<span style="color:${EM.redText};">${jfrogError}</span>`, false) : ''}
+      `)}
+      ${allJFrogUsers.length > 0 ? `
+      ${emGap(14)}
+      ${emTable(`
+        ${emHead(['Email', 'Status'])}
+        ${jfrogUserRows}
+        ${jfrogFailRows}
+      `)}` : ''}
+      ${emGap(22)}
 
       <!-- Technical details -->
-      <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">Technical Configuration</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:10px;">
+      ${emSub('Technical Configuration')}
+      ${emTable(`
         ${technical?.rmqProduct    ? row('RabbitMQ Product', technical.rmqProduct, false) : ''}
         ${technical?.cpuCoreCount  ? row('CPU Cores', `${technical.cpuCoreCount} ${technical.cpuCoreType || ''}`.trim(), true) : ''}
         ${technical?.deploymentEnv ? row('Deployment', technical.deploymentEnv, false) : ''}
         ${envUse?.length           ? row('Environment Use', envUse.join(', '), true) : ''}
         ${packaging?.length        ? row('Packaging', packaging.join(', '), false) : ''}
-      </table>
+      `)}
+      ${emGap(22)}
 
       <!-- JSM -->
-      <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">Jira Service Management &nbsp;${jsmStatus}</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;">
+      ${emSub(`Jira Service Management &nbsp;${jsmStatus}`)}
+      ${emTable(`
         ${row('Org Name', jsmResult?.orgName || '—', false)}
         ${row('Org ID', jsmResult?.orgId || '—', true)}
         ${row('Org Created', jsmResult ? (jsmResult.orgCreated ? 'Yes (new)' : 'No (existing)') : '—', false)}
         ${row('Users Added', jsmResult ? String(jsmResult.usersAdded?.length || 0) : '—', true)}
-        ${jsmError ? row('Error', `<span style="color:#721c24;">${jsmError}</span>`, false) : ''}
-      </table>
+        ${jsmError ? row('Error', `<span style="color:${EM.redText};">${jsmError}</span>`, false) : ''}
+      `)}
     </div>`;
   }
 
   // ── SUPPORT ──
   if (services.support) {
     const jsmStatus = jsmError ? err('Error') : jsmResult ? ok('Provisioned') : na('Skipped');
-    const supportUserRows = (supportUsers || []).map((u, i) => `
-      <tr style="${i % 2 === 0 ? '' : 'background:#f8f8f8;'}border-top:1px solid #eee;">
-        <td style="padding:6px 10px;font-size:12px;">${u.firstName || ''} ${u.lastName || ''}</td>
-        <td style="padding:6px 10px;font-size:12px;color:#FF6600;">${u.email}</td>
+    const supportUserRows = (supportUsers || []).map((u) => `
+      <tr>
+        ${emTd(`${u.firstName || ''} ${u.lastName || ''}`)}
+        ${emTd(u.email, emAccent)}
       </tr>`).join('');
 
-    sections += `
-    <div style="margin-bottom:28px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <p style="margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF6600;">🎫 Support</p>
-        &nbsp;${jsmStatus}
-      </div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:10px;">
+    sections += `${sections ? emDivider() : ''}
+    <div>
+      ${emSectionHead('🎫 Support', jsmStatus)}
+      ${emGap(12)}
+      ${emTable(`
         ${row('Org Name', jsmResult?.orgName || '—', false)}
         ${row('Users Added', jsmResult ? String(jsmResult.usersAdded?.length || 0) : '—', true)}
-        ${jsmError ? row('Error', `<span style="color:#721c24;">${jsmError}</span>`, false) : ''}
-      </table>
+        ${jsmError ? row('Error', `<span style="color:${EM.redText};">${jsmError}</span>`, false) : ''}
+      `)}
       ${supportUsers?.length > 0 ? `
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:6px;overflow:hidden;">
-        <tr style="background:#161616;">
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Name</td>
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Email</td>
-        </tr>
+      ${emGap(14)}
+      ${emTable(`
+        ${emHead(['Name', 'Email'])}
         ${supportUserRows}
-      </table>` : ''}
+      `)}` : ''}
     </div>`;
   }
 
@@ -485,80 +584,73 @@ function buildInternalEmailHtml({
   if (services.broker) {
     const status = brokerJfrogError ? err('Error') : brokerJfrogResult ? ok('Provisioned') : na('Skipped');
     const users  = [...(brokerJfrogResult?.invited || []), ...(brokerJfrogResult?.updated || [])];
-    const userRows = users.map((e, i) => `
-      <tr style="${i % 2 === 0 ? '' : 'background:#f8f8f8;'}border-top:1px solid #eee;">
-        <td style="padding:6px 10px;font-size:12px;color:#FF6600;">${esc(e)}</td>
-        <td style="padding:6px 10px;font-size:11px;color:#666;">${brokerJfrogResult.invited.includes(e) ? '(invited — new account)' : '(added to group)'}</td>
+    const userRows = users.map((e) => `
+      <tr>
+        ${emTd(esc(e), emAccent)}
+        ${emTd(brokerJfrogResult.invited.includes(e) ? '(invited — new account)' : '(added to group)', `font-size:12px;color:${EM.sec};`)}
       </tr>`).join('');
     const failRows = (brokerJfrogResult?.failed || []).map(f => `
-      <tr style="border-top:1px solid #eee;background:#fff5f5;"><td colspan="2" style="padding:6px 10px;font-size:12px;color:#721c24;">${esc(f)}</td></tr>`).join('');
+      <tr><td colspan="2" style="padding:10px 12px;border-bottom:1px solid ${EM.hair};background:${EM.redTint};${EMF}font-size:13px;line-height:19px;color:${EM.redText};">${esc(f)}</td></tr>`).join('');
 
-    sections += `
-    <div style="margin-bottom:28px;">
-      <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF6600;">📦 AceMQ Broker</p>
-      <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">JFrog Artifactory &nbsp;${status}</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:6px;">
+    sections += `${sections ? emDivider() : ''}
+    <div>
+      ${emSectionHead('📦 AceMQ Broker')}
+      ${emGap(14)}
+      ${emSub(`JFrog Artifactory &nbsp;${status}`)}
+      ${emTable(`
         ${row('Group', esc(brokerJfrogResult?.groupName || '—'), false)}
         ${row('Permission Target', esc(brokerJfrogResult?.permName || '—'), true)}
-        ${brokerJfrogError ? row('Error', `<span style="color:#721c24;">${esc(brokerJfrogError)}</span>`, false) : ''}
-      </table>
+        ${brokerJfrogError ? row('Error', `<span style="color:${EM.redText};">${esc(brokerJfrogError)}</span>`, false) : ''}
+      `)}
       ${users.length || failRows ? `
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:6px;overflow:hidden;margin-bottom:10px;">
-        <tr style="background:#161616;">
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Email</td>
-          <td style="padding:6px 10px;font-size:11px;color:#fff;font-weight:700;">Status</td>
-        </tr>
+      ${emGap(14)}
+      ${emTable(`
+        ${emHead(['Email', 'Status'])}
         ${userRows}${failRows}
-      </table>` : ''}
-      <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#161616;">Environment &amp; Go-Live</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #eee;border-radius:6px;overflow:hidden;">
+      `)}` : ''}
+      ${emGap(22)}
+      ${emSub('Environment &amp; Go-Live')}
+      ${emTable(`
         ${brokerRows(broker).map(([l, v], i) => row(l, esc(v), i % 2 === 1)).join('')}
         ${broker?.comments ? row('Comments', esc(broker.comments), false) : ''}
-      </table>
+      `)}
     </div>`;
   }
 
   const hasErrors = fusebaseError || jfrogError || jsmError || brokerJfrogError;
 
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;">
-    <tr><td align="center" style="padding:40px 20px;">
-      <table width="640" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.08);">
-        <tr><td style="background:#000;padding:24px 36px;">
-          <p style="margin:0;color:#8FD5CC;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;">THE #1 RABBITMQ PARTNER</p>
-          <p style="margin:6px 0 0;color:#fff;font-size:22px;font-weight:700;">AceMQ — Internal Onboarding Report</p>
-        </td></tr>
-        <tr><td style="background:${hasErrors ? '#c0392b' : '#FF6600'};height:4px;"></td></tr>
-        <tr><td style="padding:32px 36px;">
-          <p style="margin:0 0 6px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;">New Submission — ${date}</p>
-          <h1 style="margin:0 0 20px;color:#161616;font-size:24px;font-weight:700;">${company}</h1>
+  const summary = [
+    ['Submitter', `${submitter.firstName} ${submitter.lastName} &lt;${submitter.email}&gt;`],
+    submitter.jobTitle && ['Title', submitter.jobTitle],
+    submitter.phone    && ['Phone', submitter.phone],
+    ['Services', svcList],
+    ['Report PDF', pdfGenerated ? ok('Attached') : err('Failed')],
+    ['Overall Status', hasErrors ? err('Errors — review below') : ok('All systems provisioned')],
+  ].filter(Boolean).map(([l, v], i, a) => row(l, v, false, i === a.length - 1)).join('');
+
+  return emShell({
+    ruleColor: hasErrors ? EM.red : EM.orange,
+    footerLines: [
+      `<strong style="color:${EM.ink};">AceMQ, an Ace8 company</strong>`,
+      `© ${new Date().getFullYear()} AceMQ, an Ace8 Company · Sent automatically by ${emLink('https://onboarding.acemq.com', 'onboarding.acemq.com')} · ${emLink('mailto:support@acemq.com', 'support@acemq.com')}`,
+    ],
+    body: `
+        <tr><td class="px" style="padding:36px 40px 40px;">
+          ${emEyebrow(`New Submission — ${date}`)}
+          ${emGap(14)}
+          ${emH1(company)}
+          <p style="margin:8px 0 0;${EMF}font-size:15px;line-height:22px;color:${EM.sec};">AceMQ — Internal Onboarding Report</p>
+          ${emGap(28)}
 
           <!-- Summary -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:8px;overflow:hidden;margin-bottom:28px;">
-            ${row('Submitter', `${submitter.firstName} ${submitter.lastName} &lt;${submitter.email}&gt;`, false)}
-            ${submitter.jobTitle ? row('Title', submitter.jobTitle, true) : ''}
-            ${submitter.phone    ? row('Phone', submitter.phone, false) : ''}
-            ${row('Services', svcList, submitter.phone ? false : true)}
-            ${row('Report PDF', pdfGenerated ? ok('Attached') : err('Failed'), false)}
-            ${hasErrors ? row('Overall Status', err('Errors — review below'), true) : row('Overall Status', ok('All systems provisioned'), true)}
-          </table>
+          ${emTile(summary)}
+          ${emGap(32)}
 
           <!-- Per-service sections -->
           ${sections}
 
-        </td></tr>
-        <tr><td style="background:#000;padding:16px 36px;text-align:center;">
-          <p style="margin:0;color:#666;font-size:11px;">© ${new Date().getFullYear()} AceMQ, an Ace8 Company · Sent automatically by onboarding.acemq.com</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+        </td></tr>`,
+  });
 }
 
 function buildCustomerEmailHtml({ submitter, company, services, engagementParticipants,
@@ -573,37 +665,41 @@ function buildCustomerEmailHtml({ submitter, company, services, engagementPartic
 
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+  const kv = (label, value, noLine) => `
+      <tr>
+        <td valign="top" style="padding:11px 16px 11px 0;${noLine ? '' : `border-bottom:1px solid ${EM.hair};`}${EMF}font-size:11px;line-height:20px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${EM.muted};width:38%;">${label}</td>
+        <td valign="top" style="padding:11px 0;${noLine ? '' : `border-bottom:1px solid ${EM.hair};`}${EMF}font-size:14px;line-height:20px;color:${EM.ink};word-break:break-word;">${value}</td>
+      </tr>`;
+  const note = (html) => `<p style="margin:16px 0 0;${EMF}font-size:14px;line-height:22px;color:${EM.sec};">${html}</p>`;
+
   let sectionsHtml = '';
 
   if (services.engagement) {
     const leadRow = { firstName: submitter.firstName, lastName: submitter.lastName, title: submitter.jobTitle || '', email: submitter.email, role: 'Lead Stakeholder' };
     const allParticipants = [leadRow, ...(engagementParticipants || [])];
     const participantRows = allParticipants.map(p => `
-      <tr style="border-top:1px solid #eee;">
-        <td style="padding:8px 12px;font-size:13px;">${p.firstName || ''} ${p.lastName || ''}</td>
-        <td style="padding:8px 12px;font-size:13px;color:#666;">${p.title || p.jobTitle || '—'}</td>
-        <td style="padding:8px 12px;font-size:13px;color:#FF6600;">${p.email}</td>
-        <td style="padding:8px 12px;font-size:13px;">${p.role}</td>
+      <tr>
+        ${emTd(`${p.firstName || ''} ${p.lastName || ''}`)}
+        ${emTd(p.title || p.jobTitle || '—', `color:${EM.sec};`)}
+        ${emTd(String(p.email).replace('@', '@<wbr>'), emAccent)}
+        ${emTd(p.role)}
       </tr>`).join('');
 
-    sectionsHtml += `
-    <div style="margin-bottom:28px;">
-      <p style="margin:0 0 8px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">Engagement</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:6px;overflow:hidden;margin-bottom:12px;">
-        ${kickoffDate ? `<tr><td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;width:38%;">Kickoff Date</td><td style="padding:8px 12px;font-size:13px;">${kickoffDate}</td></tr>` : ''}
-        ${teamTimezone ? `<tr style="border-top:1px solid #eee;"><td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;">Team Timezone</td><td style="padding:8px 12px;font-size:13px;">${teamTimezone}</td></tr>` : ''}
-        ${schedulingPref ? `<tr style="border-top:1px solid #eee;"><td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;">Scheduling</td><td style="padding:8px 12px;font-size:13px;">${schedulingPref}</td></tr>` : ''}
-      </table>
-      <p style="margin:12px 0 6px;font-size:12px;font-weight:700;color:#161616;">Participants</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:6px;overflow:hidden;">
-        <tr style="background:#161616;">
-          <td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Name</td>
-          <td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Title</td>
-          <td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Email</td>
-          <td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Role</td>
-        </tr>
+    sectionsHtml += `${sectionsHtml ? emDivider() : ''}
+    <div>
+      ${emSectionHead('Engagement')}
+      ${emGap(12)}
+      ${emTable(`
+        ${kickoffDate ? kv('Kickoff Date', kickoffDate) : ''}
+        ${teamTimezone ? kv('Team Timezone', teamTimezone) : ''}
+        ${schedulingPref ? kv('Scheduling', schedulingPref) : ''}
+      `)}
+      ${emGap(22)}
+      ${emSub('Participants')}
+      ${emTable(`
+        ${emHead(['Name', 'Title', 'Email', 'Role'])}
         ${participantRows}
-      </table>
+      `)}
     </div>`;
   }
 
@@ -616,138 +712,106 @@ function buildCustomerEmailHtml({ submitter, company, services, engagementPartic
       packaging?.length        && ['Packaging', packaging.join(', ')],
     ].filter(Boolean);
 
-    const licRowsHtml = licRows.map(([l, v], i) => `
-      <tr style="${i > 0 ? 'border-top:1px solid #eee;' : ''}">
-        <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;width:38%;">${l}</td>
-        <td style="padding:8px 12px;font-size:13px;">${v}</td>
-      </tr>`).join('');
+    const licRowsHtml = licRows.map(([l, v]) => kv(l, v)).join('');
 
-    const portalRowsHtml = (portalUsers || []).map(e => `
-      <tr style="border-top:1px solid #eee;"><td style="padding:8px 12px;font-size:13px;color:#FF6600;">${e}</td></tr>`).join('');
+    const portalRowsHtml = (portalUsers || []).map(e => `<tr>${emTd(e, emAccent)}</tr>`).join('');
 
-    sectionsHtml += `
-    <div style="margin-bottom:28px;">
-      <p style="margin:0 0 8px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">License</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:6px;overflow:hidden;margin-bottom:12px;">
-        ${licRowsHtml}
-      </table>
+    sectionsHtml += `${sectionsHtml ? emDivider() : ''}
+    <div>
+      ${emSectionHead('License')}
+      ${emGap(12)}
+      ${emTable(licRowsHtml)}
       ${portalUsers?.length ? `
-      <p style="margin:12px 0 6px;font-size:12px;font-weight:700;color:#161616;">Portal Users</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:6px;overflow:hidden;">
-        <tr style="background:#161616;"><td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Email</td></tr>
+      ${emGap(22)}
+      ${emSub('Portal Users')}
+      ${emTable(`
+        ${emHead(['Email'])}
         ${portalRowsHtml}
-      </table>` : ''}
-      <p style="margin:12px 0 0;font-size:13px;color:#666;">Your JFrog Artifactory credentials will be emailed to each portal user shortly. A setup guide is attached to this email.</p>
+      `)}` : ''}
+      ${note('Your JFrog Artifactory credentials will be emailed to each portal user shortly. A setup guide is attached to this email.')}
     </div>`;
   }
 
   if (services.broker && broker) {
-    const rowsHtml = brokerRows(broker).map(([l, v], i) => `
-      <tr style="${i > 0 ? 'border-top:1px solid #eee;' : ''}">
-        <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:700;text-transform:uppercase;width:38%;">${esc(l)}</td>
-        <td style="padding:8px 12px;font-size:13px;">${esc(v)}</td>
-      </tr>`).join('');
+    const rowsHtml = brokerRows(broker).map(([l, v]) => kv(esc(l), esc(v))).join('');
     const users = [submitter.email, ...(broker.users || [])];
 
-    sectionsHtml += `
-    <div style="margin-bottom:28px;">
-      <p style="margin:0 0 8px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">AceMQ Broker</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:6px;overflow:hidden;margin-bottom:12px;">
-        ${rowsHtml}
-      </table>
-      <p style="margin:12px 0 6px;font-size:12px;font-weight:700;color:#161616;">Repository Access</p>
-      <p style="margin:0;font-size:13px;color:#FF6600;">${users.map(esc).join('<br>')}</p>
-      <p style="margin:12px 0 0;font-size:13px;color:#666;">Each person above will receive a separate email with their AceMQ Artifactory login for the AceMQ Broker project. Full documentation is at <a href="https://broker.acemq.com" style="color:#FF6600;">broker.acemq.com</a>.</p>
+    sectionsHtml += `${sectionsHtml ? emDivider() : ''}
+    <div>
+      ${emSectionHead('AceMQ Broker')}
+      ${emGap(12)}
+      ${emTable(rowsHtml)}
+      ${emGap(22)}
+      ${emSub('Repository Access')}
+      <p style="margin:0;${EMF}font-size:14px;line-height:22px;color:${EM.accent};">${users.map(esc).join('<br>')}</p>
+      ${note(`Each person above will receive a separate email with their AceMQ Artifactory login for the AceMQ Broker project. Full documentation is at ${emLink('https://broker.acemq.com', 'broker.acemq.com')}.`)}
     </div>`;
   }
 
   if (services.support) {
-    const supportRowsHtml = (supportUsers || []).map((u, i) => `
-      <tr style="${i > 0 ? 'border-top:1px solid #eee;' : ''}">
-        <td style="padding:8px 12px;font-size:13px;">${u.firstName || ''} ${u.lastName || ''}</td>
-        <td style="padding:8px 12px;font-size:13px;color:#FF6600;">${u.email}</td>
+    const supportRowsHtml = (supportUsers || []).map((u) => `
+      <tr>
+        ${emTd(`${u.firstName || ''} ${u.lastName || ''}`)}
+        ${emTd(u.email, emAccent)}
       </tr>`).join('');
 
-    sectionsHtml += `
-    <div style="margin-bottom:28px;">
-      <p style="margin:0 0 8px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;">Support</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f8f8f8;border-radius:6px;overflow:hidden;">
-        <tr style="background:#161616;">
-          <td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Name</td>
-          <td style="padding:8px 12px;font-size:11px;color:#fff;font-weight:700;">Email</td>
-        </tr>
+    sectionsHtml += `${sectionsHtml ? emDivider() : ''}
+    <div>
+      ${emSectionHead('Support')}
+      ${emGap(12)}
+      ${emTable(`
+        ${emHead(['Name', 'Email'])}
         ${supportRowsHtml}
-      </table>
-      <p style="margin:12px 0 0;font-size:13px;color:#666;">Your support portal access has been provisioned. You will receive a separate email from our support system.</p>
+      `)}
+      ${note('Your support portal access has been provisioned. You will receive a separate email from our support system.')}
     </div>`;
   }
 
-  return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f9;font-family:Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;">
-    <tr><td align="center" style="padding:40px 20px;">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.08);">
-        <tr><td style="background:#000;padding:28px 40px;">
-          <p style="margin:0;color:#8FD5CC;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;">THE #1 RABBITMQ PARTNER</p>
-          <p style="margin:6px 0 0;color:#fff;font-size:24px;font-weight:700;">AceMQ</p>
-        </td></tr>
-        <tr><td style="background:#FF6600;height:4px;"></td></tr>
-        <tr><td style="padding:40px;">
-          <p style="margin:0 0 8px;color:#FF6600;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;">Onboarding Confirmed</p>
-          <h1 style="margin:0 0 8px;color:#161616;font-size:26px;font-weight:700;">Welcome, ${submitter.firstName}!</h1>
-          <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6;">
-            Thank you for completing your onboarding with AceMQ. Your submission has been received and our team will be in touch within <strong>1 business day</strong> to get everything kicked off.
+  const summary = [
+    ['Company', `<strong>${company}</strong>`],
+    ['Services', svcList.join('&nbsp;&nbsp;·&nbsp;&nbsp;')],
+    ['Date', date],
+  ].map(([l, v], i, a) => kv(l, v, i === a.length - 1)).join('');
+
+  return emShell({
+    footerLines: [
+      `<strong style="color:${EM.ink};">AceMQ, an Ace8 company</strong>`,
+      `© ${new Date().getFullYear()} AceMQ, an Ace8 Company · ${emLink('mailto:support@acemq.com', 'support@acemq.com')} · ${emLink('https://acemq.com', 'acemq.com')}`,
+    ],
+    body: `
+        <tr><td class="px" style="padding:40px;">
+          ${emEyebrow('Onboarding Confirmed')}
+          ${emGap(14)}
+          ${emH1(`Welcome, ${submitter.firstName}!`)}
+          <p style="margin:16px 0 0;${EMF}font-size:16px;line-height:26px;color:${EM.body};">
+            Thank you for completing your onboarding with AceMQ. Your submission has been received and our team will be in touch within <strong style="color:${EM.ink};">1 business day</strong> to get everything kicked off.
           </p>
+          ${emGap(28)}
 
           <!-- Summary card -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f8f8;border-radius:8px;margin-bottom:28px;">
-            <tr><td style="padding:20px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding:7px 0;color:#999;font-size:12px;font-weight:700;text-transform:uppercase;width:40%;">Company</td>
-                  <td style="padding:7px 0;color:#161616;font-size:14px;font-weight:700;">${company}</td>
-                </tr>
-                <tr>
-                  <td style="padding:7px 0;color:#999;font-size:12px;font-weight:700;text-transform:uppercase;">Services</td>
-                  <td style="padding:7px 0;color:#161616;font-size:14px;">${svcList.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</td>
-                </tr>
-                <tr>
-                  <td style="padding:7px 0;color:#999;font-size:12px;font-weight:700;text-transform:uppercase;">Date</td>
-                  <td style="padding:7px 0;color:#161616;font-size:14px;">${date}</td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
+          ${emTile(summary)}
+          ${emGap(32)}
 
           <!-- Per-service detail sections -->
           ${sectionsHtml}
+          ${sectionsHtml ? emGap(32) : ''}
 
-          <div style="background:#fff8f3;border-left:3px solid #FF6600;border-radius:4px;padding:16px 20px;margin-bottom:24px;">
-            <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
+          ${emCallout(`
               Your full onboarding report is attached to this email as a PDF for your records.
               ${services.license ? 'The JFrog Pull Guide is also attached to help you get started with your license.' : ''}
-            </p>
-          </div>
+          `)}
+          ${emGap(24)}
 
-          <p style="margin:0;font-size:14px;color:#555;line-height:1.6;">
-            Questions? Reach out to us at <a href="mailto:support@acemq.com" style="color:#FF6600;">support@acemq.com</a>
+          <p style="margin:0;${EMF}font-size:14px;line-height:22px;color:${EM.sec};">
+            Questions? Reach out to us at ${emLink('mailto:support@acemq.com', 'support@acemq.com')}
           </p>
-        </td></tr>
-        <tr><td style="background:#000;padding:20px 40px;text-align:center;">
-          <p style="margin:0;color:#666;font-size:11px;">© ${new Date().getFullYear()} AceMQ, an Ace8 Company · support@acemq.com · acemq.com</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+        </td></tr>`,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PDF report — pdf-lib, matches AceMQ Standard Doc Format (same as Redis tool)
+// PDF report — pdf-lib, AceMQ "ace26" brand (white, hairlines, orange accent).
+// Standard fonts only (Helvetica); every string goes through toWinAnsi.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function toWinAnsi(str) {
@@ -772,17 +836,27 @@ async function buildReportPdf({
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold    = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const BLACK  = rgb(0,    0,    0);
-  const ORANGE = rgb(1,    0.4,  0);
-  const DARK   = rgb(0.1,  0.1,  0.1);
-  const LIGHT  = rgb(0.6,  0.6,  0.6);
-  const WHITE  = rgb(1,    1,    1);
-  const ROWALT = rgb(0.98, 0.98, 0.98);
-  const BRDR   = rgb(0.91, 0.91, 0.91);
+  // Logo is cosmetic: never let a missing file break report generation.
+  let logo = null;
+  try { logo = await doc.embedPng(fs.readFileSync(path.join(process.cwd(), 'public', 'redesign', 'logo.png'))); } catch (_) {}
+
+  const hex = (h) => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
+  const INK    = hex('#121316');
+  const SEC    = hex('#5F6670');
+  const MUTED  = hex('#757B85');
+  const HAIR   = hex('#E9EBEE');
+  const CTL    = hex('#DDE0E4');
+  const SURF   = hex('#FAFAFB');
+  const ORANGE = hex('#FF6600');
+  const ACCENT = hex('#BF4D00');
+  const TINT   = hex('#FFF5EC');
+  const TINT2  = hex('#FFE8D6');
 
   const W = 595, H = 842;
   const ML = 56, MR = 56;
   const BW = W - ML - MR;
+  const TOP = H - 64;     // first baseline area on every page
+  const BOTTOM = 76;      // content never goes below this (footer lives under it)
 
   const date      = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const dateShort = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
@@ -795,13 +869,21 @@ async function buildReportPdf({
   ].filter(Boolean);
 
   let page = patchDrawText(doc.addPage([W, H]));
-  let y = H - 56;
+  let y = TOP;
 
+  // Wrap text to maxW; sanitizes first (so measuring never throws) and hard-breaks over-long tokens.
   function wrapLines(text, font, size, maxW) {
-    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const words = toWinAnsi(text || '').split(/\s+/).filter(Boolean);
     const lines = [];
     let cur = '';
-    for (const w of words) {
+    for (let w of words) {
+      while (font.widthOfTextAtSize(w, size) > maxW && w.length > 1) {
+        let n = w.length - 1;
+        while (n > 1 && font.widthOfTextAtSize(w.slice(0, n), size) > maxW) n--;
+        if (cur) { lines.push(cur); cur = ''; }
+        lines.push(w.slice(0, n));
+        w = w.slice(n);
+      }
       const trial = cur ? `${cur} ${w}` : w;
       if (font.widthOfTextAtSize(trial, size) > maxW && cur) { lines.push(cur); cur = w; }
       else cur = trial;
@@ -810,44 +892,79 @@ async function buildReportPdf({
     return lines.length ? lines : [''];
   }
 
+  // Rounded rectangle via SVG path (pdf-lib has no borderRadius). yTop = top edge in PDF coords.
+  function roundRect(x, yTop, w, h, r, { fill, stroke, sw = 0.6 }) {
+    r = Math.min(r, h / 2, w / 2);
+    const k = 0.5523 * r;
+    const d = `M ${r} 0 L ${w - r} 0 C ${w - r + k} 0 ${w} ${r - k} ${w} ${r} L ${w} ${h - r} C ${w} ${h - r + k} ${w - r + k} ${h} ${w - r} ${h} L ${r} ${h} C ${r - k} ${h} 0 ${h - r + k} 0 ${h - r} L 0 ${r} C 0 ${r - k} ${r - k} 0 ${r} 0 Z`;
+    page.drawSvgPath(d, { x, y: yTop, ...(fill ? { color: fill } : {}), ...(stroke ? { borderColor: stroke, borderWidth: sw } : {}) });
+  }
+
+  function hairline(yy, color = HAIR, thickness = 0.6) {
+    page.drawLine({ start: { x: ML, y: yy }, end: { x: ML + BW, y: yy }, thickness, color });
+  }
+
   function ensureSpace(needed) {
-    if (y - needed < 56) {
+    if (y - needed < BOTTOM) {
       page = patchDrawText(doc.addPage([W, H]));
-      y = H - 56;
-      drawFooter(page);
+      y = TOP;
     }
   }
 
-  function drawFooter(p) {
-    const fy = 36;
-    p.drawLine({ start: { x: ML, y: fy + 12 }, end: { x: W - MR, y: fy + 12 }, thickness: 0.5, color: LIGHT, opacity: 0.5 });
-    p.drawText('AceMQ · an ace8 company', { x: ML, y: fy, font: regular, size: 7, color: LIGHT });
-    const right = `AceMQ Onboarding Report  ·  ${dateShort}`;
-    p.drawText(right, { x: W - MR - regular.widthOfTextAtSize(right, 7), y: fy, font: regular, size: 7, color: LIGHT });
+  // ── COVER ──
+  if (logo) {
+    const lw = 104, lh = lw * logo.height / logo.width;
+    page.drawImage(logo, { x: ML, y: y - lh, width: lw, height: lh });
+    y -= lh;
+  } else {
+    y -= 18;
+    page.drawText('AceMQ', { x: ML, y, font: bold, size: 20, color: INK });
+  }
+  y -= 44;
+  // eyebrow: orange dash + uppercase label
+  page.drawRectangle({ x: ML, y: y + 2.6, width: 24, height: 1.5, color: ORANGE });
+  page.drawText('ONBOARDING REPORT', { x: ML + 34, y, font: bold, size: 8, color: ACCENT, characterSpacing: 1.7 });
+  y -= 38;
+  page.drawText('AceMQ Onboarding Report', { x: ML, y, font: bold, size: 32, color: INK, characterSpacing: -0.7 });
+  y -= 26;
+  {
+    const sub = `${company}  ·  Prepared by AceMQ  ·  ${date}`;
+    if (regular.widthOfTextAtSize(toWinAnsi(sub), 11) <= BW) {
+      page.drawText(sub, { x: ML, y, font: regular, size: 11, color: SEC });
+    } else {
+      const sl = wrapLines(sub, regular, 11, BW);
+      sl.forEach((ln, i) => page.drawText(ln, { x: ML, y: y - i * 15, font: regular, size: 11, color: SEC }));
+      y -= (sl.length - 1) * 15;
+    }
+  }
+  y -= 34;
+
+  // Services chips (tint pills instead of a filled bar)
+  {
+    const CH = 19, SZ = 7, CS = 0.8, PX = 11, GAP = 6;
+    const labelW = bold.widthOfTextAtSize('SERVICES', SZ) + CS * 8;
+    let cx = ML + labelW + 14;
+    let rowTop = y;
+    page.drawText('SERVICES', { x: ML, y: rowTop - CH + 6.5, font: bold, size: SZ, color: MUTED, characterSpacing: CS });
+    svcNames.forEach((s) => {
+      const label = toWinAnsi(s).toUpperCase();
+      const cw = bold.widthOfTextAtSize(label, SZ) + CS * label.length + PX * 2;
+      if (cx + cw > ML + BW) { cx = ML; rowTop -= CH + 8; }
+      roundRect(cx, rowTop, cw, CH, CH / 2, { fill: TINT, stroke: TINT2, sw: 0.6 });
+      page.drawText(label, { x: cx + PX, y: rowTop - CH + 6.5, font: bold, size: SZ, color: ACCENT, characterSpacing: CS });
+      cx += cw + GAP;
+    });
+    y = rowTop - CH - 30;
   }
 
-  drawFooter(page);
-
-  // ── COVER ──
-  page.drawRectangle({ x: ML, y: y - 2, width: BW, height: 2, color: ORANGE });
-  y -= 16;
-  page.drawText('ONBOARDING REPORT', { x: ML, y, font: bold, size: 7.5, color: ORANGE, characterSpacing: 1.8 });
-  y -= 14;
-  page.drawText('AceMQ Onboarding Report', { x: ML, y, font: bold, size: 22, color: BLACK });
-  y -= 28;
-  page.drawText(`${company}  ·  Prepared by AceMQ  ·  ${date}`, { x: ML, y, font: regular, size: 10, color: LIGHT });
-  y -= 20;
-  page.drawRectangle({ x: ML, y: y - 18, width: BW, height: 18, color: ORANGE });
-  page.drawText(`SERVICES:  ${svcNames.join('  ·  ').toUpperCase()}`, { x: ML + 10, y: y - 13, font: bold, size: 7.5, color: WHITE, characterSpacing: 0.6 });
-  y -= 30;
+  hairline(y, CTL, 0.8);
+  y -= 34;
 
   // Submission details table
-  y -= 6;
-  page.drawText('Submission Details', { x: ML, y, font: bold, size: 13, color: BLACK });
-  y -= 12;
+  page.drawText('Submission Details', { x: ML, y, font: bold, size: 14, color: INK, characterSpacing: -0.2 });
+  y -= 20;
 
   const COL1  = BW * 0.3;
-  const ROW_H = 16;
 
   const detailRows = [
     ['Title',          'AceMQ Onboarding Report'],
@@ -861,72 +978,104 @@ async function buildReportPdf({
     ['Prepared By',    'AceMQ — Program Management'],
   ];
 
-  page.drawRectangle({ x: ML, y: y - ROW_H, width: BW, height: ROW_H, color: DARK });
-  page.drawText('Document', { x: ML + 6,       y: y - ROW_H + 5, font: bold, size: 8, color: WHITE });
-  page.drawText('Detail',   { x: ML + COL1 + 6, y: y - ROW_H + 5, font: bold, size: 8, color: WHITE });
-  y -= ROW_H;
-
-  detailRows.forEach(([l, v], i) => {
-    ensureSpace(ROW_H + 2);
-    if (i % 2 === 1) page.drawRectangle({ x: ML, y: y - ROW_H, width: BW, height: ROW_H, color: ROWALT });
-    page.drawLine({ start: { x: ML, y: y - ROW_H }, end: { x: ML + BW, y: y - ROW_H }, thickness: 0.4, color: BRDR });
-    page.drawText(l, { x: ML + 6, y: y - ROW_H + 5, font: regular, size: 8, color: LIGHT });
-    const vf = (l === 'Company' || l === 'Services') ? bold : regular;
-    page.drawText(String(v || '—'), { x: ML + COL1 + 6, y: y - ROW_H + 5, font: vf, size: 8, color: DARK, maxWidth: BW - COL1 - 12 });
-    y -= ROW_H;
-  });
-  y -= 16;
-
   // ── Helpers ──
 
+  const HEAD_H = 19;
+  function drawColHeads(heads, xs) {
+    heads.forEach((h, i) => {
+      page.drawText(h.toUpperCase(), { x: xs[i], y: y - 12, font: bold, size: 6.5, color: MUTED, characterSpacing: 0.9 });
+    });
+    hairline(y - HEAD_H, CTL, 0.8);
+    y -= HEAD_H;
+  }
+
+  // Key/value table: muted uppercase labels, ink values, hairline rows. Rows grow to fit wrapped values.
+  function drawKVTable(rows, heads = ['Detail', 'Value'], boldLabels = []) {
+    const VAL = 9, LH = 12, PADY = 7.5;
+    const valW = BW - COL1 - 12;
+    const prepared = rows.map(([l, v]) => {
+      const font = boldLabels.includes(l) ? bold : regular;
+      const lines = wrapLines(String(v || '—'), font, VAL, valW);
+      return { l, font, lines, h: lines.length * LH + PADY * 2 };
+    });
+    ensureSpace(HEAD_H + (prepared[0] ? prepared[0].h : 0) + 2);
+    drawColHeads(heads, [ML, ML + COL1]);
+    prepared.forEach((r) => {
+      ensureSpace(r.h + 2);
+      const by = y - PADY - 7;
+      page.drawText(r.l.toUpperCase(), { x: ML, y: by, font: bold, size: 6.5, color: MUTED, characterSpacing: 0.8 });
+      r.lines.forEach((ln, i) => page.drawText(ln, { x: ML + COL1, y: by - i * LH, font: r.font, size: VAL, color: INK }));
+      hairline(y - r.h);
+      y -= r.h;
+    });
+    y -= 18;
+  }
+
+  // Multi-column grid (participants, support users, single-column lists). Header optional.
+  function drawGrid(heads, fracs, rows, size = 8, color = INK) {
+    const LH = size + 3.5, PADY = 7;
+    const widths = fracs.map((f) => BW * f);
+    const xs = widths.map((_, i) => ML + widths.slice(0, i).reduce((a, b) => a + b, 0));
+    const prepared = rows.map((cells) => {
+      const lines = cells.map((c, ci) => wrapLines(String(c || '—'), regular, size, widths[ci] - 12));
+      return { lines, h: Math.max(...lines.map((l) => l.length)) * LH + PADY * 2 };
+    });
+    ensureSpace((heads.length ? HEAD_H : 0) + (prepared[0] ? prepared[0].h : 0) + 2);
+    if (heads.length) drawColHeads(heads, xs);
+    prepared.forEach((r) => {
+      ensureSpace(r.h + 2);
+      r.lines.forEach((cl, ci) => cl.forEach((ln, li) => {
+        page.drawText(ln, { x: xs[ci], y: y - PADY - size * 0.8 - li * LH, font: regular, size, color });
+      }));
+      hairline(y - r.h);
+      y -= r.h;
+    });
+    y -= 18;
+  }
+
   function drawSectionBanner(num, title) {
-    ensureSpace(36);
-    y -= 8;
-    page.drawRectangle({ x: ML, y: y - 18, width: BW, height: 18, color: ORANGE });
-    page.drawText(`${num}.  ${title}`, { x: ML + 10, y: y - 13, font: bold, size: 8, color: WHITE, characterSpacing: 0.8 });
-    y -= 28;
+    ensureSpace(150);
+    y -= 14;
+    page.drawText(String(num).padStart(2, '0'), { x: ML, y: y - 18, font: bold, size: 24, color: ORANGE, characterSpacing: -0.6 });
+    page.drawText(title, { x: ML + 42, y: y - 18, font: bold, size: 13, color: INK, characterSpacing: 0.5 });
+    hairline(y - 32, CTL, 0.8);
+    y -= 32 + 22;
   }
 
   function drawSectionHead(text) {
-    ensureSpace(22);
-    page.drawText(text, { x: ML, y, font: bold, size: 12, color: BLACK });
-    y -= 16;
+    ensureSpace(70);
+    page.drawText(text, { x: ML, y, font: bold, size: 11.5, color: INK, characterSpacing: -0.1 });
+    y -= 20;
   }
 
   function drawSubHead(text) {
-    ensureSpace(18);
-    page.drawText(text, { x: ML, y, font: bold, size: 10, color: DARK });
+    ensureSpace(60);
+    page.drawText(text, { x: ML, y, font: bold, size: 9.5, color: INK });
+    y -= 16;
+  }
+
+  // Free text in a faint tile. Draws in per-page chunks so long text can never run off the page.
+  function drawTextBlock(text) {
+    if (!text?.trim()) return;
+    const LH = 13, SZ = 9, PAD = 11;
+    const lines = wrapLines(text, regular, SZ, BW - PAD * 2);
+    let i = 0;
+    while (i < lines.length) {
+      ensureSpace(Math.min(lines.length - i, 3) * LH + PAD * 2 + 2);
+      const fit = Math.max(1, Math.floor((y - BOTTOM - PAD * 2) / LH));
+      const n = Math.min(lines.length - i, fit);
+      const h = n * LH + PAD * 2;
+      roundRect(ML, y, BW, h, 10, { fill: SURF, stroke: HAIR, sw: 0.6 });
+      lines.slice(i, i + n).forEach((ln, k) => {
+        page.drawText(ln, { x: ML + PAD, y: y - PAD - SZ * 0.85 - k * LH, font: regular, size: SZ, color: INK });
+      });
+      y -= h + 4;
+      i += n;
+    }
     y -= 14;
   }
 
-  function drawKVTable(rows) {
-    page.drawRectangle({ x: ML, y: y - ROW_H, width: BW, height: ROW_H, color: DARK });
-    page.drawText('Detail', { x: ML + 6,       y: y - ROW_H + 5, font: bold, size: 8, color: WHITE });
-    page.drawText('Value',  { x: ML + COL1 + 6, y: y - ROW_H + 5, font: bold, size: 8, color: WHITE });
-    y -= ROW_H;
-    rows.forEach(([l, v], i) => {
-      ensureSpace(ROW_H + 2);
-      if (i % 2 === 1) page.drawRectangle({ x: ML, y: y - ROW_H, width: BW, height: ROW_H, color: ROWALT });
-      page.drawLine({ start: { x: ML, y: y - ROW_H }, end: { x: ML + BW, y: y - ROW_H }, thickness: 0.4, color: BRDR });
-      page.drawText(l, { x: ML + 6, y: y - ROW_H + 5, font: regular, size: 8, color: LIGHT });
-      page.drawText(String(v || '—'), { x: ML + COL1 + 6, y: y - ROW_H + 5, font: regular, size: 8, color: DARK, maxWidth: BW - COL1 - 12 });
-      y -= ROW_H;
-    });
-    y -= 8;
-  }
-
-  function drawTextBlock(text) {
-    if (!text?.trim()) return;
-    const LH = 13, SZ = 8.5, AW = BW - 16;
-    const lines = wrapLines(text, regular, SZ, AW);
-    const blockH = lines.length * LH + 10;
-    ensureSpace(blockH);
-    page.drawRectangle({ x: ML, y: y - blockH + 10, width: 3, height: blockH - 10, color: ORANGE });
-    lines.forEach((line, i) => {
-      page.drawText(line, { x: ML + 10, y: y - i * LH, font: regular, size: SZ, color: DARK });
-    });
-    y -= blockH;
-  }
+  drawKVTable(detailRows, ['Document', 'Detail'], ['Company', 'Services']);
 
   let sn = 1;
 
@@ -947,28 +1096,12 @@ async function buildReportPdf({
       const leadRow = { firstName: submitter.firstName, lastName: submitter.lastName, title: submitter.jobTitle || '', email: submitter.email, role: 'Lead Stakeholder' };
       const allParticipants = [leadRow, ...(engagementParticipants || [])];
       drawSubHead('Participants');
-      const PC = [BW * 0.25, BW * 0.22, BW * 0.28, BW * 0.25];
-      const PRH = 15;
-      ensureSpace(PRH + 2);
-      page.drawRectangle({ x: ML, y: y - PRH, width: BW, height: PRH, color: DARK });
-      let xo = ML;
-      ['Name', 'Title', 'Email', 'Role'].forEach((h, ci) => {
-        page.drawText(h, { x: xo + 4, y: y - PRH + 5, font: bold, size: 7.5, color: WHITE, maxWidth: PC[ci] - 8 });
-        xo += PC[ci];
-      });
-      y -= PRH;
-      allParticipants.forEach((p, i) => {
-        ensureSpace(PRH + 2);
-        if (i % 2 === 1) page.drawRectangle({ x: ML, y: y - PRH, width: BW, height: PRH, color: ROWALT });
-        page.drawLine({ start: { x: ML, y: y - PRH }, end: { x: ML + BW, y: y - PRH }, thickness: 0.4, color: BRDR });
-        xo = ML;
-        [`${p.firstName || ''} ${p.lastName || ''}`.trim() || '—', p.title || '—', p.email || '—', p.role || '—'].forEach((c, ci) => {
-          page.drawText(c, { x: xo + 4, y: y - PRH + 5, font: regular, size: 7.5, color: DARK, maxWidth: PC[ci] - 8 });
-          xo += PC[ci];
-        });
-        y -= PRH;
-      });
-      y -= 8;
+      drawGrid(
+        ['Name', 'Title', 'Email', 'Role'],
+        [0.21, 0.21, 0.38, 0.20],
+        allParticipants.map((p) => [`${p.firstName || ''} ${p.lastName || ''}`.trim() || '—', p.title || '—', p.email || '—', p.role || '—']),
+        8,
+      );
     }
 
     if (engagementDescription?.trim()) {
@@ -994,14 +1127,7 @@ async function buildReportPdf({
 
     if (portalUsers?.length) {
       drawSubHead('Portal Users');
-      portalUsers.forEach((email, i) => {
-        ensureSpace(14);
-        if (i % 2 === 0) page.drawRectangle({ x: ML, y: y - 13, width: BW, height: 13, color: ROWALT });
-        page.drawLine({ start: { x: ML, y: y - 13 }, end: { x: ML + BW, y: y - 13 }, thickness: 0.4, color: BRDR });
-        page.drawText(email, { x: ML + 6, y: y - 8, font: regular, size: 8, color: DARK });
-        y -= 13;
-      });
-      y -= 8;
+      drawGrid([], [1], portalUsers.map((email) => [email]), 8.5);
     }
 
     if (comments?.trim()) {
@@ -1017,14 +1143,7 @@ async function buildReportPdf({
     drawKVTable(brokerRows(broker));
 
     drawSubHead('Repository Access');
-    [submitter.email, ...(broker.users || [])].forEach((email, i) => {
-      ensureSpace(14);
-      if (i % 2 === 0) page.drawRectangle({ x: ML, y: y - 13, width: BW, height: 13, color: ROWALT });
-      page.drawLine({ start: { x: ML, y: y - 13 }, end: { x: ML + BW, y: y - 13 }, thickness: 0.4, color: BRDR });
-      page.drawText(email, { x: ML + 6, y: y - 8, font: regular, size: 8, color: DARK });
-      y -= 13;
-    });
-    y -= 8;
+    drawGrid([], [1], [submitter.email, ...(broker.users || [])].map((email) => [email]), 8.5);
     drawTextBlock('Each user receives an AceMQ Artifactory login (acemq.jfrog.io) scoped to the AceMQ Broker project. New users get a temporary password by email and are prompted to change it on first login. Full documentation: broker.acemq.com');
 
     if (broker.comments?.trim()) {
@@ -1039,33 +1158,28 @@ async function buildReportPdf({
     drawSectionHead('Support Users');
 
     if (supportUsers?.length) {
-      const SC = [BW * 0.28, BW * 0.28, BW * 0.44];
-      const SRH = 15;
-      ensureSpace(SRH + 2);
-      page.drawRectangle({ x: ML, y: y - SRH, width: BW, height: SRH, color: DARK });
-      let xo = ML;
-      ['First Name', 'Last Name', 'Email'].forEach((h, ci) => {
-        page.drawText(h, { x: xo + 4, y: y - SRH + 5, font: bold, size: 7.5, color: WHITE, maxWidth: SC[ci] - 8 });
-        xo += SC[ci];
-      });
-      y -= SRH;
-      supportUsers.forEach((u, i) => {
-        ensureSpace(SRH + 2);
-        if (i % 2 === 1) page.drawRectangle({ x: ML, y: y - SRH, width: BW, height: SRH, color: ROWALT });
-        page.drawLine({ start: { x: ML, y: y - SRH }, end: { x: ML + BW, y: y - SRH }, thickness: 0.4, color: BRDR });
-        xo = ML;
-        [u.firstName || '—', u.lastName || '—', u.email || '—'].forEach((c, ci) => {
-          page.drawText(c, { x: xo + 4, y: y - SRH + 5, font: regular, size: 8, color: DARK, maxWidth: SC[ci] - 8 });
-          xo += SC[ci];
-        });
-        y -= SRH;
-      });
+      drawGrid(
+        ['First Name', 'Last Name', 'Email'],
+        [0.28, 0.28, 0.44],
+        supportUsers.map((u) => [u.firstName || '—', u.lastName || '—', u.email || '—']),
+        8.5,
+      );
     } else {
       ensureSpace(18);
-      page.drawText('No support users specified.', { x: ML, y, font: regular, size: 8.5, color: LIGHT });
+      page.drawText('No support users specified.', { x: ML, y, font: regular, size: 9, color: MUTED });
       y -= 16;
     }
   }
+
+  // ── Page chrome on every page: orange top rule + footer with page number ──
+  const pages = doc.getPages();
+  pages.forEach((p, i) => {
+    p.drawRectangle({ x: 0, y: H - 3, width: W, height: 3, color: ORANGE });
+    p.drawLine({ start: { x: ML, y: 56 }, end: { x: W - MR, y: 56 }, thickness: 0.6, color: CTL });
+    p.drawText(toWinAnsi(`AceMQ Onboarding Report  ·  ${dateShort}`), { x: ML, y: 40, font: regular, size: 7.5, color: MUTED });
+    const right = toWinAnsi(`AceMQ, an Ace8 company  ·  Page ${i + 1} of ${pages.length}`);
+    p.drawText(right, { x: W - MR - regular.widthOfTextAtSize(right, 7.5), y: 40, font: regular, size: 7.5, color: MUTED });
+  });
 
   return Buffer.from(await doc.save());
 }
@@ -1155,53 +1269,45 @@ async function ensureJFrogPermission(permName, groupName, product) {
 
 async function sendJFrogInviteEmail(email, tempPwd, company, product) {
   // tempPwd is null for existing JFrog users — they get access notification without credentials.
-  const credRows = tempPwd ? `
-          <tr style="border-top:1px solid #eee;">
-            <td style="padding:12px 16px;font-size:13px;color:#666;">Temp Password</td>
-            <td style="padding:12px 16px;font-size:14px;font-family:monospace;letter-spacing:1px;">${tempPwd}</td>
-          </tr>` : '';
+  const jRow = (label, valueHtml, mono, noLine) => `
+          <tr>
+            <td valign="top" style="padding:11px 16px 11px 0;${noLine ? '' : `border-bottom:1px solid ${EM.hair};`}${EMF}font-size:11px;line-height:20px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${EM.muted};width:34%;">${label}</td>
+            <td valign="top" style="padding:11px 0;${noLine ? '' : `border-bottom:1px solid ${EM.hair};`}${mono ? "font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.02em;" : EMF}font-size:14px;line-height:20px;color:${EM.ink};word-break:break-word;">${valueHtml}</td>
+          </tr>`;
+  const credRows = tempPwd ? jRow('Temp Password', tempPwd, true, true) : '';
+  const jNote = (html) => `<p style="margin:20px 0 0;${EMF}font-size:14px;line-height:22px;color:${EM.sec};">${html}</p>`;
   const postLoginNote = tempPwd
-    ? `<p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.5;">You will be prompted to change your password after your first login.</p>`
-    : `<p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.5;">Log in with your existing AceMQ Artifactory credentials.${product.attachGuide ? ' The pull guide attached to this email has step-by-step instructions.' : ''}</p>`;
+    ? jNote('You will be prompted to change your password after your first login.')
+    : jNote(`Log in with your existing AceMQ Artifactory credentials.${product.attachGuide ? ' The pull guide attached to this email has step-by-step instructions.' : ''}`);
   const docsNote = product.docsUrl
-    ? `<p style="margin:20px 0 0;font-size:14px;line-height:1.6;">Full installation and usage documentation: <a href="${product.docsUrl}" style="color:#FF6B00;">${product.docsUrl.replace('https://', '')}</a></p>`
+    ? `<p style="margin:20px 0 0;${EMF}font-size:14px;line-height:22px;color:${EM.body};">Full installation and usage documentation: ${emLink(product.docsUrl, product.docsUrl.replace('https://', ''))}</p>`
     : '';
 
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
-      <div style="background:#FF6B00;padding:24px 32px;">
-        <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:1px;">AceMQ</span>
-      </div>
-      <div style="padding:32px;">
-        <h2 style="margin:0 0 16px;font-size:22px;">Your ${product.label} Artifact Access is Ready</h2>
-        <p style="margin:0 0 20px;line-height:1.6;">
-          Your account on the AceMQ JFrog Artifactory platform has been provisioned as part of
-          the <strong>${company}</strong> ${product.label} onboarding. You now have access to the
-          ${product.label} repositories.
-        </p>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:24px;background:#f8f8f8;border-radius:6px;">
-          <tr>
-            <td style="padding:12px 16px;font-size:13px;color:#666;width:120px;">Platform</td>
-            <td style="padding:12px 16px;font-size:14px;"><a href="https://acemq.jfrog.io" style="color:#FF6B00;">acemq.jfrog.io</a></td>
-          </tr>
-          <tr style="border-top:1px solid #eee;">
-            <td style="padding:12px 16px;font-size:13px;color:#666;">Username</td>
-            <td style="padding:12px 16px;font-size:14px;font-family:monospace;">${email}</td>
-          </tr>
+  const html = emShell({
+    footerLines: [
+      `<strong style="color:${EM.ink};">AceMQ, an Ace8 company</strong>`,
+      `Questions? Contact ${emLink('mailto:support@acemq.com', 'support@acemq.com')}`,
+    ],
+    body: `
+        <tr><td class="px" style="padding:36px 40px 40px;">
+          ${emH1(`Your ${product.label} Artifact Access is Ready`, 26)}
+          <p style="margin:16px 0 0;${EMF}font-size:15px;line-height:25px;color:${EM.body};">
+            Your account on the AceMQ JFrog Artifactory platform has been provisioned as part of
+            the <strong style="color:${EM.ink};">${company}</strong> ${product.label} onboarding. You now have access to the
+            ${product.label} repositories.
+          </p>
+          ${emGap(24)}
+          ${emTile(`
+          ${jRow('Platform', emLink('https://acemq.jfrog.io', 'acemq.jfrog.io'), false, false)}
+          ${jRow('Username', email, true, !tempPwd)}
           ${credRows}
-        </table>
-        <a href="https://acemq.jfrog.io" style="display:inline-block;background:#FF6B00;color:#fff;text-decoration:none;padding:12px 28px;border-radius:4px;font-weight:700;font-size:15px;">
-          Log In to AceMQ Artifactory →
-        </a>
-        ${postLoginNote}
-        ${docsNote}
-        <hr style="margin:32px 0;border:none;border-top:1px solid #eee;">
-        <p style="margin:0;font-size:13px;color:#888;">
-          AceMQ · an ace8 company<br>
-          Questions? Contact <a href="mailto:support@acemq.com" style="color:#FF6B00;">support@acemq.com</a>
-        </p>
-      </div>
-    </div>`;
+          `)}
+          ${emGap(28)}
+          ${emButton('https://acemq.jfrog.io', 'Log In to AceMQ Artifactory →')}
+          ${postLoginNote}
+          ${docsNote}
+        </td></tr>`,
+  });
 
   let guidePdf = null;
   if (product.attachGuide) try {

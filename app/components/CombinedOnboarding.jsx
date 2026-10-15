@@ -130,6 +130,14 @@ function buildStepList(services) {
   return list;
 }
 
+// Rail groups steps under the section they belong to.
+const stepGroup = (s) =>
+  s === 'contact' || s === 'services' ? 'Getting started'
+  : s === 'engagement' ? 'Engagement'
+  : s.startsWith('license') ? 'License'
+  : s.startsWith('broker') ? 'AceMQ Broker'
+  : 'Support';
+
 // Labels shown in each section header's "what's left" trail.
 const STEP_LABELS = {
   'contact':       'Contact information',
@@ -276,7 +284,7 @@ function SectionHeader({ icon, label, accent, stepLabel, steps }) {
           </p>
           <p className="font-display text-[2rem] font-[800] tracking-[-0.018em] text-[#121316]">{label}</p>
         </div>
-        <div className="flex items-center gap-[0.6rem]">
+        <div className="flex items-center gap-[0.6rem] lg:hidden">
           {steps.map((s, i) => (
             <span key={i} className="w-[0.8rem] h-[0.8rem] rounded-full"
               style={{ background: i === 0 ? accent : `${accent}33` }} />
@@ -284,7 +292,7 @@ function SectionHeader({ icon, label, accent, stepLabel, steps }) {
         </div>
       </div>
       {/* What's covered */}
-      <div className="px-[2rem] py-[1.2rem] bg-white flex flex-wrap gap-x-[2rem] gap-y-[0.4rem]">
+      <div className="lg:hidden px-[2rem] py-[1.2rem] bg-white flex flex-wrap gap-x-[2rem] gap-y-[0.4rem]">
         {steps.map((s, i) => (
           <span key={i} className="flex items-center gap-[0.5rem] text-[1.25rem]"
             style={{ color: i === 0 ? '#121316' : '#bbb' }}>
@@ -760,7 +768,7 @@ export default function CombinedOnboarding() {
 
       {/* PROGRESS BAR */}
       {!submitted && !processing && !isIntro && stepIdx > 0 && (
-        <div className="w-full max-w-[68.8rem] lg:max-w-[99.2rem] mx-auto px-[1.6rem] sm:px-[2.4rem] pt-[3.2rem] flex-shrink-0 relative z-10">
+        <div className="lg:hidden w-full max-w-[68.8rem] mx-auto px-[1.6rem] sm:px-[2.4rem] pt-[3.2rem] flex-shrink-0 relative z-10">
           <div className="flex justify-between text-[1.2rem] font-[600] tracking-[0.14em] uppercase text-[#757B85] mb-[1rem]">
             <span>Step {currentFormStepNum} of {totalFormSteps}</span>
             <span>{pct}%</span>
@@ -772,33 +780,54 @@ export default function CombinedOnboarding() {
       )}
 
       {/* MAIN CARD */}
-      <div className={`flex-1 flex items-start justify-center gap-[2.4rem] px-[1.6rem] sm:px-[2.4rem] pb-[9.6rem] relative z-[1] ${isIntro ? 'pt-[5.6rem]' : 'pt-[2.4rem]'}`}>
+      <div className={`flex-1 flex items-start justify-center gap-[2.4rem] px-[1.6rem] sm:px-[2.4rem] pb-[9.6rem] relative z-[1] ${isIntro ? 'pt-[6.4rem]' : 'pt-[2.4rem] lg:pt-[4.8rem]'}`}>
         {showRail && (
-          <aside className="hidden lg:block w-[28rem] flex-shrink-0 sticky top-[9.6rem] rounded-[2.8rem] bg-[#0B0C0E] text-white p-[3.2rem] overflow-hidden relative shadow-[var(--sh-4)]">
-            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(420px 320px at 100% 0%, rgba(255,102,0,.22), transparent 62%)' }} />
-            <p className="relative text-[1.2rem] font-[600] tracking-[0.16em] uppercase text-[#FF8A3D] mb-[2.4rem]">Your onboarding</p>
-            <ol className="relative flex flex-col">
+          <aside className="hidden lg:block w-[28rem] flex-shrink-0 sticky top-[9.6rem] rounded-[2.4rem] bg-white border border-[#E9EBEE] shadow-[var(--sh-1)] p-[2.8rem]">
+            <p className="eyebrow mb-[1.6rem]">Your onboarding</p>
+            <div className="flex items-baseline justify-between mb-[0.8rem]">
+              <span className="font-display text-[1.8rem] font-[800] tracking-[-0.018em] text-[#121316]">Step {currentFormStepNum} of {totalFormSteps}</span>
+              <span className="text-[1.3rem] text-[#5F6670]">{pct}%</span>
+            </div>
+            <div className="h-[4px] bg-[#E9EBEE] rounded-full overflow-hidden mb-[2.4rem]">
+              <div className="h-full bg-[#FF6600] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            </div>
+            <ol className="flex flex-col">
               {formStepList.map((s, i) => {
                 const done = i < formStepIdx, now = i === formStepIdx;
+                const newGroup = i === 0 || stepGroup(formStepList[i - 1]) !== stepGroup(s);
+                const last = i === formStepList.length - 1;
                 return (
-                  <li key={s} className="flex items-start gap-[1.4rem] pb-[2rem] last:pb-0 relative">
-                    {i < formStepList.length - 1 && <span className={`absolute left-[1.1rem] top-[2.6rem] bottom-[0.2rem] w-px ${done ? 'bg-[#8FD5CC]' : 'bg-[#33363D]'}`} />}
-                    <span className={`w-[2.3rem] h-[2.3rem] rounded-full flex-shrink-0 flex items-center justify-center text-[1.1rem] font-[600] ${
-                      done ? 'bg-[#8FD5CC] text-[#0B0C0E]' : now ? 'bg-[#FF6600] text-white shadow-[0_0_0_5px_rgba(255,102,0,.22)]' : 'border border-[#33363D] text-[#8B9099]'
-                    }`}>{done ? '✓' : i + 1}</span>
-                    <span className={`text-[1.45rem] leading-[2.3rem] ${now ? 'text-white font-[600]' : done ? 'text-[#A9ADB4]' : 'text-[#8B9099]'}`}>{STEP_LABELS[s]}</span>
+                  <li key={s}>
+                    {newGroup && (
+                      <p className={`text-[1.1rem] font-[600] tracking-[0.14em] uppercase text-[#757B85] ${i === 0 ? '' : 'mt-[1.2rem]'} mb-[0.8rem]`}>{stepGroup(s)}</p>
+                    )}
+                    <div className={`relative flex items-center gap-[1.2rem] rounded-[1.2rem] px-[1rem] py-[0.8rem] -mx-[1rem] ${now ? 'bg-[#FFF5EC]' : ''}`}>
+                      {!last && stepGroup(formStepList[i + 1]) === stepGroup(s) && (
+                        <span className={`absolute left-[2.15rem] top-[3.4rem] h-[1.6rem] w-[1.5px] ${done ? 'bg-[#8FD5CC]' : 'bg-[#E9EBEE]'}`} />
+                      )}
+                      <span className={`w-[2.4rem] h-[2.4rem] rounded-full flex-shrink-0 flex items-center justify-center text-[1.15rem] font-[600] transition-all ${
+                        done ? 'bg-[#E3F4F1] text-[#236B61] border border-[#8FD5CC]'
+                        : now ? 'bg-[#FF6600] text-white shadow-[0_0_0_4px_#FFE8D6]'
+                        : 'bg-white text-[#5F6670] border border-[#DDE0E4]'
+                      }`}>
+                        {done
+                          ? <svg className="w-[1.2rem] h-[1.2rem] stroke-current fill-none" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
+                          : i + 1}
+                      </span>
+                      <span className={`text-[1.45rem] leading-[1.3] ${now ? 'text-[#121316] font-[600]' : done ? 'text-[#5F6670]' : 'text-[#1F2125]'}`}>{STEP_LABELS[s]}</span>
+                    </div>
                   </li>
                 );
               })}
             </ol>
-            <div className="relative mt-[3.2rem] pt-[2.4rem] border-t border-[#25282E] text-[1.3rem] text-[#A9ADB4] leading-[1.6]">
-              Questions? <a href="mailto:onboarding@acemq.com" className="text-[#FF8A3D] hover:text-white">onboarding@acemq.com</a>
+            <div className="mt-[2.4rem] pt-[2rem] border-t border-[#E9EBEE] text-[1.3rem] text-[#5F6670] leading-[1.6]">
+              Questions? <a href="mailto:onboarding@acemq.com" className="text-[#BF4D00] hover:underline">onboarding@acemq.com</a>
             </div>
           </aside>
         )}
-        <div className={`w-full relative ${isIntro ? 'max-w-[96rem]' : `bg-white border border-[#E9EBEE] rounded-[2.8rem] overflow-hidden shadow-[var(--sh-4)] ${currentStep === 'support-users' ? 'max-w-[72rem]' : 'max-w-[64rem]'}`}`}
-          style={{ padding: isIntro ? 0 : 'clamp(3.2rem, 5vw, 5.2rem) clamp(2.4rem, 5vw, 5.6rem)' }}>
-          {!isIntro && <div className="absolute top-0 inset-x-0 h-[22rem] pointer-events-none" style={{ background: 'radial-gradient(520px 220px at 50% -40%, rgba(255,102,0,.10), transparent 70%)' }} />}
+        <div className={`w-full relative bg-white border border-[#E9EBEE] rounded-[2.8rem] overflow-hidden shadow-[var(--sh-4)] ${currentStep === 'support-users' ? 'max-w-[72rem]' : isIntro ? 'max-w-[68rem]' : 'max-w-[64rem]'}`}
+          style={{ padding: isIntro ? 'clamp(4rem, 6vw, 6.4rem) clamp(2.8rem, 6vw, 6.4rem)' : 'clamp(3.2rem, 5vw, 5.2rem) clamp(2.4rem, 5vw, 5.6rem)' }}>
+          <div className="absolute top-0 inset-x-0 h-[22rem] pointer-events-none" style={{ background: 'radial-gradient(520px 220px at 50% -40%, rgba(255,102,0,.10), transparent 70%)' }} />
 
 
           <div key={currentStep + (submitted ? '-success' : '')} className="animate-fade-slide">
@@ -807,71 +836,46 @@ export default function CombinedOnboarding() {
             {currentStep === 'intro' && !submitted && (
               <div className="text-center">
 
-                {/* Pill banner */}
-                <div className="inline-flex items-center gap-[1rem] rounded-full border border-[#E9EBEE] bg-white pl-[0.6rem] pr-[1.6rem] py-[0.6rem] shadow-[var(--sh-1)] mb-[3.2rem]">
-                  <span className="rounded-full bg-[#FFE8D6] text-[#BF4D00] text-[1.15rem] font-[600] tracking-[0.04em] px-[1rem] py-[0.4rem]">NEW</span>
-                  <span className="text-[1.35rem] font-[500] text-[#1F2125]">AceMQ Broker builds now delivered through JFrog</span>
-                </div>
+                <p className="eyebrow mb-[2.4rem]">AceMQ Onboarding</p>
 
-                <h1 className="text-[#121316] text-[clamp(4rem,6.2vw,7.8rem)] leading-[1] font-[800] tracking-[-0.035em] mb-[2.8rem] max-w-[90rem] mx-auto">
-                  Your AceMQ <span className="hl">onboarding</span>,<br className="hidden sm:block" /> done in <span className="text-[#FF6600]">one pass</span>.
+                <h1 className="text-[#121316] text-[clamp(3.6rem,5vw,5.2rem)] leading-[1.04] font-[800] tracking-[-0.035em] mb-[2rem]">
+                  Your AceMQ<br /><span className="hl">onboarding process</span>
                 </h1>
 
-                <p className="font-display text-[clamp(1.8rem,1.5vw,2.1rem)] font-[700] text-[#121316] mb-[1rem]">Engagement, support, licensing and AceMQ Broker access.</p>
-                <p className="text-[#5F6670] text-[clamp(1.7rem,1.4vw,1.9rem)] leading-[1.55] max-w-[60rem] mx-auto mb-[3.6rem]">
-                  Pick what you need, answer a few questions, and we provision everything. You'll get a branded PDF report the moment you finish.
+                <p className="text-[#5F6670] text-[clamp(1.7rem,1.4vw,1.9rem)] leading-[1.55] max-w-[48rem] mx-auto mb-[3.6rem]">
+                  Complete your engagement, support portal, license, and AceMQ Broker setup in one guided experience. You'll get a branded PDF report when you finish.
                 </p>
 
-                <div className="flex items-center justify-center flex-wrap gap-[1.2rem] mb-[2rem]">
-                  <BtnOrange onClick={goNext} className="min-h-[5.6rem] pl-[3rem] pr-[0.8rem] text-[1.6rem]">
-                    Get Started
-                    <span className="w-[4rem] h-[4rem] rounded-full bg-[rgba(255,255,255,.2)] flex items-center justify-center text-[1.8rem]">→</span>
-                  </BtnOrange>
-                  <a href="https://broker.acemq.com" target="_blank" rel="noopener noreferrer"
-                    className="bg-white text-[#121316] border border-[#DDE0E4] rounded-full min-h-[5.6rem] px-[2.8rem] text-[1.6rem] font-[600] shadow-[var(--sh-1)] hover:border-[#121316] transition-all inline-flex items-center gap-[0.8rem]">
-                    AceMQ Broker docs <span className="text-[#BF4D00]">↗</span>
-                  </a>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1.2rem] mb-[4rem] text-left">
+                  {[
+                    { icon: '🤝', title: 'Engagement', desc: 'Professional services, migrations & architecture' },
+                    { icon: '🎫', title: 'Support Portal', desc: 'Submit & track RabbitMQ issues 24/7' },
+                    { icon: '🔑', title: 'License', desc: 'JFrog image access & portal provisioning' },
+                    { icon: '📦', title: 'AceMQ Broker', desc: 'LTS broker builds via JFrog' },
+                  ].map(({ icon, title, desc }) => (
+                    <div key={title} className="flex items-center gap-[1.4rem] border border-[#E9EBEE] rounded-[1.6rem] bg-white px-[1.6rem] py-[1.4rem] shadow-[var(--sh-1)]">
+                      <span className="w-[4.4rem] h-[4.4rem] rounded-[1.3rem] bg-[#FFF5EC] border border-[#FFE8D6] flex items-center justify-center text-[2rem] flex-shrink-0">{icon}</span>
+                      <span>
+                        <span className="block font-display text-[1.7rem] font-[700] tracking-[-0.01em] text-[#121316]">{title}</span>
+                        <span className="block text-[1.3rem] text-[#5F6670] leading-[1.45]">{desc}</span>
+                      </span>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Footer pills */}
-                <div className="flex items-center justify-center flex-wrap gap-[2rem] mt-[2.4rem]">
+                <BtnOrange onClick={goNext} className="min-h-[5.6rem] pl-[3rem] pr-[0.8rem] text-[1.6rem]">
+                  Get Started
+                  <span className="w-[4rem] h-[4rem] rounded-full bg-[rgba(255,255,255,.2)] flex items-center justify-center text-[1.8rem]">→</span>
+                </BtnOrange>
+
+                <div className="flex items-center justify-center flex-wrap gap-x-[2rem] gap-y-[0.8rem] mt-[2.4rem]">
                   {['~5 minutes', 'PDF report included', 'Select only what you need'].map(t => (
-                    <span key={t} className="flex items-center gap-[0.5rem] text-[1.2rem] text-[#757B85]">
+                    <span key={t} className="flex items-center gap-[0.5rem] text-[1.3rem] text-[#5F6670]">
                       <svg className="w-[1.2rem] h-[1.2rem] stroke-[#236B61] fill-none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       {t}
                     </span>
-                  ))}
-                </div>
-
-                {/* Stat strip */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 max-w-[80rem] mx-auto mt-[5.6rem] border border-[#E9EBEE] rounded-[2rem] bg-white shadow-[var(--sh-1)] overflow-hidden">
-                  {[['4', '', 'onboarding tracks'], ['5', 'min', 'start to finish'], ['1', '', 'PDF report, auto-sent'], ['24', '/7', 'RabbitMQ support']].map(([n, u, l], i) => (
-                    <div key={l} className={`px-[2rem] py-[2.4rem] ${i > 0 ? 'sm:border-l' : ''} ${i % 2 ? 'border-l' : ''} ${i > 1 ? 'border-t sm:border-t-0' : ''} border-[#E9EBEE]`}>
-                      <p className="font-display text-[3.4rem] font-[800] tracking-[-0.03em] text-[#121316] leading-none">{n}<span className="text-[#FF6600] text-[2rem] ml-[0.2rem]">{u}</span></p>
-                      <p className="text-[1.3rem] text-[#5F6670] mt-[0.8rem]">{l}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Track tiles */}
-                <p className="eyebrow mt-[7.2rem] mb-[1.6rem]">What you can set up</p>
-                <h2 className="text-[#121316] text-[clamp(3rem,4.1vw,4.8rem)] leading-[1.04] font-[800] tracking-[-0.03em] mb-[4rem]">
-                  Four tracks. <span className="hl">Select only what you need.</span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[1.6rem] text-left">
-                  {[
-                    { icon: '🤝', title: 'Engagement', desc: 'Professional services, migrations and architecture reviews.' },
-                    { icon: '🎫', title: 'Support Portal', desc: 'Submit and track RabbitMQ issues with our engineers, 24/7.' },
-                    { icon: '🔑', title: 'License', desc: 'Tanzu RabbitMQ licensing, JFrog image access and portal users.' },
-                    { icon: '📦', title: 'AceMQ Broker', desc: 'Patched, long-term-supported broker builds via JFrog.' },
-                  ].map(({ icon, title, desc }) => (
-                    <div key={title} className="group border border-[#E9EBEE] rounded-[2.4rem] bg-white shadow-[var(--sh-1)] p-[2.4rem] transition-all duration-[420ms] hover:-translate-y-[3px] hover:shadow-[0_2px_4px_rgba(16,17,20,.04),0_16px_36px_-10px_rgba(16,17,20,.14)] hover:border-[#FFE8D6]">
-                      <span className="w-[5.6rem] h-[5.6rem] rounded-[1.6rem] bg-gradient-to-b from-[#26282D] to-[#0B0C0E] shadow-[inset_0_1px_0_rgba(255,255,255,.12),0_10px_20px_-8px_rgba(16,17,20,.5)] flex items-center justify-center text-[2.6rem] mb-[2rem] group-hover:scale-[1.05] transition-transform">{icon}</span>
-                      <p className="font-display text-[2rem] font-[800] tracking-[-0.018em] text-[#121316] mb-[0.6rem]">{title}</p>
-                      <p className="text-[1.4rem] text-[#5F6670] leading-[1.55]">{desc}</p>
-                    </div>
                   ))}
                 </div>
               </div>
