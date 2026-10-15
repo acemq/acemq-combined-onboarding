@@ -46,6 +46,12 @@ const BROKER_PACKAGING_OPTIONS = [
   'Helm Chart',
 ];
 
+// value is sent to the API, which maps it to the matching JFrog group (NFR vs Commercial distribution folder).
+const BROKER_LICENSE_OPTIONS = [
+  { value: 'nfr',        title: 'Evaluation / NFR trial',          desc: 'We are evaluating AceMQ Broker and do not have a paid subscription yet.' },
+  { value: 'commercial', title: 'Commercial (paying customer)',    desc: 'We have a paid AceMQ Broker subscription.' },
+];
+
 const BROKER_INSTALL_TYPE_OPTIONS = [
   'Migrating from an existing RabbitMQ environment',
   'New installation',
@@ -143,7 +149,7 @@ const STEP_LABELS = {
 function BtnOrange({ onClick, disabled, children, className = '' }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`bg-[#FF6600] text-white border-none rounded-[3rem] px-[4rem] py-[1.2rem] text-[1.7rem] font-[400] cursor-pointer hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all inline-flex items-center gap-[0.8rem] ${className}`}>
+      className={`bg-[#FF6600] text-white border border-transparent rounded-full min-h-[4.8rem] px-[2.6rem] text-[1.5rem] font-[600] tracking-[-0.005em] cursor-pointer shadow-[0_1px_2px_rgba(191,77,0,.25),0_10px_24px_-8px_rgba(255,102,0,.55),inset_0_1px_0_rgba(255,255,255,.22)] hover:bg-[#EE5E00] active:translate-y-[1px] active:scale-[0.985] disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-[240ms] inline-flex items-center justify-center gap-[1rem] ${className}`}>
       {children}
     </button>
   );
@@ -152,45 +158,45 @@ function BtnOrange({ onClick, disabled, children, className = '' }) {
 function BtnGhost({ onClick, children, className = '' }) {
   return (
     <button onClick={onClick}
-      className={`bg-white text-black border border-black rounded-[3rem] px-[3.5rem] py-[1.2rem] text-[1.7rem] font-[400] cursor-pointer hover:bg-[#f5f5f5] active:scale-[0.98] transition-all ${className}`}>
+      className={`bg-white text-[#121316] border border-[#DDE0E4] rounded-full min-h-[4.8rem] px-[2.4rem] text-[1.5rem] font-[600] tracking-[-0.005em] cursor-pointer shadow-[var(--sh-1)] hover:border-[#121316] active:translate-y-[1px] active:scale-[0.985] transition-all duration-[240ms] inline-flex items-center justify-center ${className}`}>
       {children}
     </button>
   );
 }
 
 function SectionLabel({ children }) {
-  return <p className="text-[#FF6600] text-[1.2rem] font-[400] tracking-[0.15em] uppercase mb-[0.8rem]">{children}</p>;
+  return <p className="eyebrow mb-[1.4rem]">{children}</p>;
 }
 
 function QHead({ children }) {
-  return <h2 className="text-[#000000] text-[2.8rem] leading-[1.3] font-[700] mb-[0.8rem]">{children}</h2>;
+  return <h2 className="text-[#121316] text-[clamp(2.6rem,2.6vw,3.4rem)] leading-[1.12] font-[800] tracking-[-0.025em] mb-[1rem]">{children}</h2>;
 }
 
 function QSub({ children, className = '' }) {
-  return <p className={`text-[#999999] text-[1.6rem] leading-[1.65] mb-[2.4rem] ${className}`}>{children}</p>;
+  return <p className={`text-[#5F6670] text-[1.7rem] leading-[1.55] mb-[2.8rem] ${className}`}>{children}</p>;
 }
 
 function TF({ type = 'text', placeholder, value, onChange, required }) {
   return (
     <input type={type} placeholder={placeholder} value={value} onChange={onChange} required={required}
-      className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all mb-[1rem]" />
+      className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
   );
 }
 
 function TA({ placeholder, value, onChange, rows = 4 }) {
   return (
     <textarea placeholder={placeholder} value={value} onChange={onChange} rows={rows}
-      className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all mb-[1rem] resize-y" />
+      className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem] resize-y" />
   );
 }
 
 function Choice({ selected, onClick, children }) {
   return (
     <button onClick={onClick}
-      className={`flex items-center gap-[1.4rem] border rounded-[1rem] px-[1.6rem] py-[1.3rem] w-full text-left text-[1.6rem] cursor-pointer transition-all mb-[0.8rem] ${
+      className={`flex items-center gap-[1.4rem] border rounded-[1.2rem] px-[1.8rem] py-[1.4rem] w-full text-left text-[1.6rem] cursor-pointer transition-all mb-[0.8rem] ${
         selected
-          ? 'border-[#FF6600] bg-[rgba(255,102,0,0.05)] text-[#000000]'
-          : 'border-[rgba(0,0,0,0.1)] bg-[#fafafa] text-[#161616] hover:border-[#FF6600] hover:bg-[rgba(255,102,0,0.03)]'
+          ? 'border-[#FF6600] bg-[#FFF5EC] text-[#121316] shadow-[0_0_0_1px_#FF6600]'
+          : 'border-[#E9EBEE] bg-white text-[#1F2125] shadow-[var(--sh-1)] hover:border-[#DDE0E4] hover:bg-[#FAFAFB]'
       }`}>
       <span className={`w-[1.8rem] h-[1.8rem] rounded-full border flex-shrink-0 flex items-center justify-center transition-all ${
         selected ? 'border-[#FF6600] bg-[#FF6600]' : 'border-[rgba(0,0,0,0.2)]'
@@ -205,10 +211,10 @@ function Choice({ selected, onClick, children }) {
 function Chip({ selected, onClick, children }) {
   return (
     <button onClick={onClick}
-      className={`flex items-center gap-[1rem] border rounded-[1rem] px-[1.6rem] py-[1.1rem] text-left text-[1.5rem] cursor-pointer transition-all mb-[0.8rem] ${
+      className={`flex items-center gap-[1rem] border rounded-[1.2rem] px-[1.6rem] py-[1.1rem] text-left text-[1.5rem] cursor-pointer transition-all mb-[0.8rem] ${
         selected
-          ? 'border-[#FF6600] bg-[rgba(255,102,0,0.07)] text-[#000000]'
-          : 'border-[rgba(0,0,0,0.1)] bg-[#fafafa] text-[#161616] hover:border-[#FF6600] hover:bg-[rgba(255,102,0,0.03)]'
+          ? 'border-[#FF6600] bg-[#FFF5EC] text-[#121316] shadow-[0_0_0_1px_#FF6600]'
+          : 'border-[#E9EBEE] bg-white text-[#1F2125] shadow-[var(--sh-1)] hover:border-[#DDE0E4] hover:bg-[#FAFAFB]'
       }`}>
       <span className={`w-[1.6rem] h-[1.6rem] rounded-[4px] border flex-shrink-0 flex items-center justify-center transition-all ${
         selected ? 'border-[#FF6600] bg-[#FF6600]' : 'border-[rgba(0,0,0,0.25)]'
@@ -226,10 +232,10 @@ function Chip({ selected, onClick, children }) {
 
 function ServiceCheckbox({ checked, onChange, icon, title, desc }) {
   return (
-    <label className={`flex items-start gap-[1.6rem] border rounded-[1.4rem] px-[2rem] py-[1.8rem] cursor-pointer transition-all ${
+    <label className={`flex items-start gap-[1.6rem] border rounded-[1.6rem] px-[2rem] py-[1.8rem] cursor-pointer transition-all ${
       checked
-        ? 'border-[#FF6600] bg-[rgba(255,102,0,0.04)] shadow-[0_0_0_1px_rgba(255,102,0,0.25)]'
-        : 'border-[rgba(0,0,0,0.1)] bg-[#fafafa] hover:border-[#FF6600] hover:bg-[rgba(255,102,0,0.02)]'
+        ? 'border-[#FF6600] bg-[#FFF5EC] shadow-[0_0_0_1px_#FF6600]'
+        : 'border-[#E9EBEE] bg-white shadow-[var(--sh-1)] hover:border-[#DDE0E4] hover:bg-[#FAFAFB]'
     }`}>
       <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
       <span className={`mt-[0.2rem] w-[2.2rem] h-[2.2rem] rounded-[6px] border flex-shrink-0 flex items-center justify-center transition-all ${
@@ -244,9 +250,9 @@ function ServiceCheckbox({ checked, onChange, icon, title, desc }) {
       <div>
         <div className="flex items-center gap-[0.8rem] mb-[0.4rem]">
           <span className="text-[2rem]">{icon}</span>
-          <span className="text-[1.7rem] font-[700] text-[#161616]">{title}</span>
+          <span className="text-[1.7rem] font-[700] text-[#121316]">{title}</span>
         </div>
-        <p className="text-[1.35rem] text-[#666] leading-[1.6]">{desc}</p>
+        <p className="text-[1.35rem] text-[#5F6670] leading-[1.6]">{desc}</p>
       </div>
     </label>
   );
@@ -258,7 +264,7 @@ function ServiceCheckbox({ checked, onChange, icon, title, desc }) {
 
 function SectionHeader({ icon, label, accent, stepLabel, steps }) {
   return (
-    <div className="rounded-[1.4rem] overflow-hidden mb-[3.2rem]" style={{ border: `1.5px solid ${accent}22` }}>
+    <div className="rounded-[2rem] overflow-hidden mb-[3.2rem] shadow-[var(--sh-1)]" style={{ border: `1px solid ${accent}2e` }}>
       {/* Colored top band */}
       <div className="flex items-center gap-[1.4rem] px-[2rem] py-[1.6rem]" style={{ background: `${accent}12` }}>
         <span className="text-[2.4rem] leading-none">{icon}</span>
@@ -266,7 +272,7 @@ function SectionHeader({ icon, label, accent, stepLabel, steps }) {
           <p className="text-[1.1rem] font-[700] tracking-[0.12em] uppercase mb-[0.2rem]" style={{ color: accent }}>
             {stepLabel}
           </p>
-          <p className="text-[1.8rem] font-[700] text-[#161616]">{label}</p>
+          <p className="font-display text-[2rem] font-[800] tracking-[-0.018em] text-[#121316]">{label}</p>
         </div>
         <div className="flex items-center gap-[0.6rem]">
           {steps.map((s, i) => (
@@ -279,7 +285,7 @@ function SectionHeader({ icon, label, accent, stepLabel, steps }) {
       <div className="px-[2rem] py-[1.2rem] bg-white flex flex-wrap gap-x-[2rem] gap-y-[0.4rem]">
         {steps.map((s, i) => (
           <span key={i} className="flex items-center gap-[0.5rem] text-[1.25rem]"
-            style={{ color: i === 0 ? '#161616' : '#bbb' }}>
+            style={{ color: i === 0 ? '#121316' : '#bbb' }}>
             <span style={{ color: i === 0 ? accent : '#ccc' }}>{i === 0 ? '●' : '○'}</span>
             {s}
           </span>
@@ -314,35 +320,35 @@ function SupportUsersEditor({ users, setUsers }) {
 
   return (
     <div>
-      <div className="bg-[#fafafa] border border-[rgba(0,0,0,0.08)] rounded-[1.2rem] p-[1.6rem] mb-[1.6rem]">
-        <p className="text-[1.3rem] font-[600] text-[#161616] mb-[1.2rem]">Add a user</p>
+      <div className="bg-[#FAFAFB] border border-[#E9EBEE] rounded-[1.2rem] p-[1.6rem] mb-[1.6rem]">
+        <p className="text-[1.3rem] font-[600] text-[#121316] mb-[1.2rem]">Add a user</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem]">
           <input placeholder="First Name *" value={draft.firstName}
             onChange={e => { setDraft(d => ({ ...d, firstName: e.target.value })); setError(''); }}
-            className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+            className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
           <input placeholder="Last Name" value={draft.lastName}
             onChange={e => setDraft(d => ({ ...d, lastName: e.target.value }))}
-            className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+            className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
         </div>
         <input type="email" placeholder="Email Address *" value={draft.email}
           onChange={e => { setDraft(d => ({ ...d, email: e.target.value })); setError(''); }}
           onKeyDown={e => e.key === 'Enter' && addUser()}
-          className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+          className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
         {error && <p className="text-[#c0392b] text-[1.3rem] mb-[1rem]">{error}</p>}
         <button onClick={addUser}
-          className="bg-[#FF6600] text-white rounded-[0.8rem] px-[2rem] py-[1rem] text-[1.4rem] cursor-pointer hover:opacity-90 transition-all">
+          className="bg-[#FF6600] text-white rounded-full min-h-[4rem] px-[2rem] text-[1.4rem] font-[600] cursor-pointer hover:bg-[#EE5E00] transition-all">
           + Add User
         </button>
       </div>
       {users.length > 0 && (
-        <div className="border border-[rgba(0,0,0,0.08)] rounded-[1.2rem] overflow-hidden mb-[1.6rem]">
-          <div className="bg-[#f5f5f5] grid grid-cols-[1fr_1fr_1.5fr_auto] px-[1.6rem] py-[1rem] text-[1.2rem] font-[700] text-[#666] uppercase tracking-[0.05em]">
+        <div className="border border-[#E9EBEE] rounded-[1.2rem] overflow-hidden mb-[1.6rem]">
+          <div className="bg-[#F3F4F6] grid grid-cols-[1fr_1fr_1.5fr_auto] px-[1.6rem] py-[1rem] text-[1.2rem] font-[700] text-[#5F6670] uppercase tracking-[0.05em]">
             <span>First Name</span><span>Last Name</span><span>Email</span><span></span>
           </div>
           {users.map((u, i) => (
-            <div key={i} className={`grid grid-cols-[1fr_1fr_1.5fr_auto] px-[1.6rem] py-[1.2rem] text-[1.4rem] items-center ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'} border-t border-[rgba(0,0,0,0.06)]`}>
-              <span className="text-[#161616] font-[600]">{u.firstName}</span>
-              <span className="text-[#666]">{u.lastName || '—'}</span>
+            <div key={i} className={`grid grid-cols-[1fr_1fr_1.5fr_auto] px-[1.6rem] py-[1.2rem] text-[1.4rem] items-center ${i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFB]'} border-t border-[#E9EBEE]`}>
+              <span className="text-[#121316] font-[600]">{u.firstName}</span>
+              <span className="text-[#5F6670]">{u.lastName || '—'}</span>
               <span className="text-[#FF6600]">{u.email}</span>
               <button onClick={() => removeUser(i)} className="text-[#c0392b] hover:text-[#a93226] text-[1.8rem] leading-none cursor-pointer px-[0.8rem]">×</button>
             </div>
@@ -350,7 +356,7 @@ function SupportUsersEditor({ users, setUsers }) {
         </div>
       )}
       {users.length === 0 && (
-        <p className="text-[#bbbbbb] text-[1.3rem] text-center py-[1.2rem]">No users added yet.</p>
+        <p className="text-[#757B85] text-[1.3rem] text-center py-[1.2rem]">No users added yet.</p>
       )}
     </div>
   );
@@ -410,53 +416,53 @@ const EngagementParticipantsEditor = forwardRef(function EngagementParticipantsE
 
   return (
     <div>
-      <div className="bg-[#fafafa] border border-[rgba(0,0,0,0.08)] rounded-[1.2rem] p-[1.6rem] mb-[1.6rem]">
-        <p className="text-[1.3rem] font-[600] text-[#161616] mb-[1.2rem]">Add a participant</p>
+      <div className="bg-[#FAFAFB] border border-[#E9EBEE] rounded-[1.2rem] p-[1.6rem] mb-[1.6rem]">
+        <p className="text-[1.3rem] font-[600] text-[#121316] mb-[1.2rem]">Add a participant</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem]">
           <input placeholder="First Name *" value={draft.firstName}
             onChange={e => { setDraft(d => ({ ...d, firstName: e.target.value })); setError(''); }}
-            className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+            className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
           <input placeholder="Last Name" value={draft.lastName}
             onChange={e => setDraft(d => ({ ...d, lastName: e.target.value }))}
-            className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+            className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
         </div>
         <input placeholder="Job Title" value={draft.title}
           onChange={e => setDraft(d => ({ ...d, title: e.target.value }))}
-          className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+          className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
         <input type="email" placeholder="Email Address *" value={draft.email}
           onChange={e => { setDraft(d => ({ ...d, email: e.target.value })); setError(''); }}
-          className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] transition-all mb-[1rem]" />
+          className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
         <select value={draft.role} onChange={e => { setDraft(d => ({ ...d, role: e.target.value })); setError(''); }}
-          className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-black outline-none focus:border-[#FF6600] transition-all mb-[1rem] cursor-pointer">
+          className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.2rem] text-[1.5rem] text-[#121316] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem] cursor-pointer">
           <option value="">Engagement Role *</option>
           {ENGAGEMENT_ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         {error && <p className="text-[#c0392b] text-[1.3rem] mb-[1rem]">{error}</p>}
         <button onClick={addParticipant}
-          className="bg-[#FF6600] text-white rounded-[0.8rem] px-[2rem] py-[1rem] text-[1.4rem] cursor-pointer hover:opacity-90 transition-all">
+          className="bg-[#FF6600] text-white rounded-full min-h-[4rem] px-[2rem] text-[1.4rem] font-[600] cursor-pointer hover:bg-[#EE5E00] transition-all">
           + Add Participant
         </button>
       </div>
       {participants.length > 0 && (
-        <div className="border border-[rgba(0,0,0,0.08)] rounded-[1.2rem] overflow-hidden mb-[1.6rem]">
-          <div className="bg-[#f5f5f5] grid grid-cols-[1fr_1.4fr_1fr_auto] px-[1.6rem] py-[1rem] text-[1.2rem] font-[700] text-[#666] uppercase tracking-[0.05em]">
+        <div className="border border-[#E9EBEE] rounded-[1.2rem] overflow-hidden mb-[1.6rem]">
+          <div className="bg-[#F3F4F6] grid grid-cols-[1fr_1.4fr_1fr_auto] px-[1.6rem] py-[1rem] text-[1.2rem] font-[700] text-[#5F6670] uppercase tracking-[0.05em]">
             <span>Name</span><span>Email</span><span>Role</span><span></span>
           </div>
           {participants.map((p, i) => (
-            <div key={i} className={`grid grid-cols-[1fr_1.4fr_1fr_auto] px-[1.6rem] py-[1.2rem] text-[1.4rem] items-center ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'} border-t border-[rgba(0,0,0,0.06)]`}>
+            <div key={i} className={`grid grid-cols-[1fr_1.4fr_1fr_auto] px-[1.6rem] py-[1.2rem] text-[1.4rem] items-center ${i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFB]'} border-t border-[#E9EBEE]`}>
               <div>
-                <span className="text-[#161616] font-[600] block">{p.firstName} {p.lastName}</span>
-                {p.title && <span className="text-[#999] text-[1.2rem]">{p.title}</span>}
+                <span className="text-[#121316] font-[600] block">{p.firstName} {p.lastName}</span>
+                {p.title && <span className="text-[#757B85] text-[1.2rem]">{p.title}</span>}
               </div>
               <span className="text-[#FF6600] text-[1.3rem] truncate">{p.email}</span>
-              <span className="text-[#666]">{p.role}</span>
+              <span className="text-[#5F6670]">{p.role}</span>
               <button onClick={() => removeParticipant(i)} className="text-[#c0392b] hover:text-[#a93226] text-[1.8rem] leading-none cursor-pointer px-[0.8rem]">×</button>
             </div>
           ))}
         </div>
       )}
       {participants.length === 0 && (
-        <p className="text-[#bbbbbb] text-[1.3rem] text-center py-[1.2rem]">No participants added yet.</p>
+        <p className="text-[#757B85] text-[1.3rem] text-center py-[1.2rem]">No participants added yet.</p>
       )}
     </div>
   );
@@ -502,9 +508,9 @@ const EmailTagInput = forwardRef(function EmailTagInput({ emails, setEmails }, r
         <input type="email" placeholder="teammate@company.com" value={input}
           onChange={e => { setInput(e.target.value); setError(''); }}
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addEmail(); } }}
-          className="flex-1 bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black placeholder:text-[#bbbbbb] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all" />
+          className="flex-1 bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] placeholder:text-[#757B85] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all" />
         <button onClick={addEmail}
-          className="bg-[#FF6600] text-white rounded-[1rem] px-[2rem] py-[1.3rem] text-[1.5rem] cursor-pointer hover:opacity-90 transition-all flex-shrink-0">
+          className="bg-[#FF6600] text-white rounded-full px-[2.2rem] text-[1.5rem] font-[600] cursor-pointer hover:bg-[#EE5E00] transition-all flex-shrink-0">
           + Add
         </button>
       </div>
@@ -519,7 +525,7 @@ const EmailTagInput = forwardRef(function EmailTagInput({ emails, setEmails }, r
           ))}
         </div>
       )}
-      <p className="text-[#bbbbbb] text-[1.2rem]">Press Enter or comma to add each address.</p>
+      <p className="text-[#757B85] text-[1.2rem]">Press Enter or comma to add each address.</p>
     </div>
   );
 });
@@ -534,42 +540,36 @@ const EmailTagInput = forwardRef(function EmailTagInput({ emails, setEmails }, r
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Footer() {
+  const head = 'text-[1.2rem] font-[600] tracking-[0.14em] uppercase text-[#757B85] mb-[1.6rem]';
+  const link = 'text-[#1F2125] text-[1.45rem] hover:text-[#BF4D00] transition-colors';
   return (
-    <footer className="bg-black flex-shrink-0 relative z-10">
-      <div className="max-w-[1300px] mx-auto px-[5.6rem] pt-[5rem] pb-[3rem]">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[4rem]">
+    <footer className="flex-shrink-0 relative z-10 border-t border-[#E9EBEE] bg-gradient-to-b from-white to-[#F6F6F7]">
+      <div className="max-w-[1200px] mx-auto px-[clamp(2rem,4vw,3.2rem)] pt-[6.4rem] pb-[3.2rem]">
+        <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr_1fr] gap-[4rem]">
           <div>
-            <img src="/redesign/ace_logo_footer.png" alt="AceMQ" style={{ width: '10rem' }} className="mb-[1.6rem]" />
-            <p className="text-[#D0D5DD] text-[1.3rem] leading-[1.7]">The #1 RabbitMQ Partner.<br />Expert consulting, licensing, and support for enterprise messaging.</p>
+            <img src="/redesign/logo-on-light.svg" alt="AceMQ" className="h-[2.8rem] w-auto mb-[1.6rem]" />
+            <p className="text-[#5F6670] text-[1.45rem] leading-[1.6] max-w-[34rem]">The #1 RabbitMQ Partner. Expert consulting, licensing, and support for enterprise messaging.</p>
           </div>
           <div>
-            <p className="text-white text-[1.4rem] font-[700] mb-[1.4rem]">Contact</p>
-            <div className="flex flex-col gap-[1rem]">
-              <div className="flex items-center gap-[0.8rem] text-[#D0D5DD] text-[1.3rem]">
-                <img src="/redesign/message.svg" alt="" className="w-[1.4rem] h-[1.4rem] opacity-60" />
-                onboarding@acemq.com
-              </div>
-              <div className="flex items-center gap-[0.8rem] text-[#D0D5DD] text-[1.3rem]">
-                <img src="/redesign/phone.svg" alt="" className="w-[1.4rem] h-[1.4rem] opacity-60" />
-                +1 305-204-2607
-              </div>
-              <div className="flex items-center gap-[0.8rem] text-[#D0D5DD] text-[1.3rem]">
-                <img src="/redesign/location.svg" alt="" className="w-[1.4rem] h-[1.4rem] opacity-60" />
-                United States
-              </div>
+            <p className={head}>Contact</p>
+            <div className="flex flex-col gap-[1rem] text-[#1F2125] text-[1.45rem]">
+              <a href="mailto:onboarding@acemq.com" className={link}>onboarding@acemq.com</a>
+              <a href="tel:+13052042607" className={link}>+1 305-204-2607</a>
+              <span>United States</span>
             </div>
           </div>
           <div>
-            <p className="text-white text-[1.4rem] font-[700] mb-[1.4rem]">Navigate</p>
-            <div className="flex flex-col gap-[0.8rem]">
-              <a href="https://acemq.com/rabbitmq/licensing" target="_blank" rel="noopener noreferrer" className="text-[#D0D5DD] text-[1.3rem] hover:text-white transition-colors">RabbitMQ Licensing</a>
-              <a href="https://acemq.com/rabbitmq" target="_blank" rel="noopener noreferrer" className="text-[#D0D5DD] text-[1.3rem] hover:text-white transition-colors">RabbitMQ Services</a>
-              <a href="https://acemq.com/support" target="_blank" rel="noopener noreferrer" className="text-[#D0D5DD] text-[1.3rem] hover:text-white transition-colors">RabbitMQ Support</a>
+            <p className={head}>Navigate</p>
+            <div className="flex flex-col gap-[1rem]">
+              <a href="https://acemq.com/rabbitmq/licensing" target="_blank" rel="noopener noreferrer" className={link}>RabbitMQ Licensing</a>
+              <a href="https://acemq.com/rabbitmq" target="_blank" rel="noopener noreferrer" className={link}>RabbitMQ Services</a>
+              <a href="https://acemq.com/support" target="_blank" rel="noopener noreferrer" className={link}>RabbitMQ Support</a>
+              <a href="https://broker.acemq.com" target="_blank" rel="noopener noreferrer" className={link}>AceMQ Broker Docs</a>
             </div>
           </div>
         </div>
-        <div className="border-t border-[#475467] mt-[3rem] pt-[2rem] text-center">
-          <p className="text-[#D0D5DD] text-[1.1rem]">© {new Date().getFullYear()} AceMQ, an Ace8 Company. All rights reserved.</p>
+        <div className="border-t border-[#E9EBEE] mt-[4.8rem] pt-[2.4rem]">
+          <p className="text-[#5F6670] text-[1.3rem]">© {new Date().getFullYear()} AceMQ, an Ace8 Company. All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -624,7 +624,7 @@ export default function CombinedOnboarding() {
   // ── AceMQ Broker fields ──
   const brokerEmailsRef = useRef(null);
   const [broker, setBroker] = useState({
-    deploymentEnv: '', envUse: [], packaging: [],
+    licenseType: '', deploymentEnv: '', envUse: [], packaging: [],
     installType: '', downtime: '', blueGreen: '', comments: '',
   });
   const [brokerUsers, setBrokerUsers] = useState([]);
@@ -747,59 +747,51 @@ export default function CombinedOnboarding() {
     <div className="min-h-screen grid-bg flex flex-col relative">
 
       {/* NAV */}
-      <nav className="bg-white border-b border-[rgba(0,0,0,0.08)] px-[5.6rem] py-[1.8rem] flex items-center justify-between flex-shrink-0 relative z-10">
-        <img src="/redesign/logo.png" alt="AceMQ" style={{ width: '11.3rem' }} />
-        <p className="text-[1.2rem] text-[#999999] tracking-[0.05em] hidden sm:block">AceMQ Onboarding</p>
+      <nav className="sticky top-0 z-20 h-[7.2rem] bg-[rgba(255,255,255,.80)] backdrop-blur-[16px] backdrop-saturate-[1.6] border-b border-[#E9EBEE] px-[clamp(2rem,4vw,3.2rem)] flex items-center justify-between flex-shrink-0">
+        <a href="https://acemq.com" aria-label="AceMQ home"><img src="/redesign/logo-on-light.svg" alt="AceMQ" className="h-[2.8rem] w-auto" /></a>
+        <span className="hidden sm:inline-flex items-center gap-[0.8rem] border border-[#E9EBEE] rounded-full bg-white px-[1.4rem] py-[0.6rem] text-[1.3rem] font-[500] text-[#5F6670] shadow-[var(--sh-1)]">
+          <span className="w-[0.7rem] h-[0.7rem] rounded-full bg-[#8FD5CC]" />
+          Customer Onboarding
+        </span>
       </nav>
 
       {/* PROGRESS BAR */}
       {!submitted && !processing && !isIntro && stepIdx > 0 && (
-        <div className="bg-white border-b border-[rgba(0,0,0,0.06)] px-[5.6rem] py-[1.4rem] flex-shrink-0 relative z-10">
-          <div className="flex justify-between text-[1.2rem] text-[#999999] mb-[0.8rem]">
+        <div className="w-full max-w-[72rem] mx-auto px-[1.6rem] sm:px-[2.4rem] pt-[3.2rem] flex-shrink-0 relative z-10">
+          <div className="flex justify-between text-[1.2rem] font-[600] tracking-[0.14em] uppercase text-[#757B85] mb-[1rem]">
             <span>Step {currentFormStepNum} of {totalFormSteps}</span>
             <span>{pct}%</span>
           </div>
-          <div className="h-[2px] bg-[rgba(0,0,0,0.08)] rounded-full">
+          <div className="h-[4px] bg-[#E9EBEE] rounded-full overflow-hidden">
             <div className="h-full bg-[#FF6600] rounded-full transition-all duration-500 ease-in-out" style={{ width: `${pct}%` }} />
           </div>
         </div>
       )}
 
       {/* MAIN CARD */}
-      <div className={`flex-1 flex items-start justify-center px-[1.5rem] sm:px-[5.6rem] pb-[8rem] relative z-[1] ${isIntro ? 'py-[7rem]' : 'py-[5.2rem]'}`}>
-        <div className={`bg-white border border-[rgba(0,0,0,0.08)] rounded-[2rem] w-full relative overflow-hidden shadow-[0_2px_40px_rgba(0,0,0,0.06)] ${
+      <div className={`flex-1 flex items-start justify-center px-[1.6rem] sm:px-[2.4rem] pb-[9.6rem] relative z-[1] ${isIntro ? 'pt-[6.4rem]' : 'pt-[2.4rem]'}`}>
+        <div className={`bg-white border border-[#E9EBEE] rounded-[2.8rem] w-full relative overflow-hidden shadow-[var(--sh-4)] ${
           currentStep === 'support-users' ? 'max-w-[72rem]' : isIntro ? 'max-w-[66rem]' : 'max-w-[62rem]'
         }`}
           style={{ padding: isIntro ? 'clamp(4rem, 6vw, 6.4rem) clamp(3.2rem, 6vw, 7.2rem)' : 'clamp(3.2rem, 5vw, 5.2rem) clamp(2.4rem, 5vw, 5.6rem)' }}>
 
-          {!submitted && !processing && !isIntro && (
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#FF6600]" />
-          )}
 
           <div key={currentStep + (submitted ? '-success' : '')} className="animate-fade-slide">
 
             {/* ── INTRO ── */}
             {currentStep === 'intro' && !submitted && (
               <div className="text-center">
-                {/* Rainbow top stripe */}
-                <div className="absolute top-0 left-0 right-0 h-[5px] bg-gradient-to-r from-[#FF6600] via-[#FF8C40] to-[#8FD5CC]" />
 
                 {/* Badge */}
-                <div className="inline-flex items-center gap-[0.6rem] border border-[rgba(0,0,0,0.1)] rounded-full px-[1.4rem] py-[0.6rem] mb-[3.2rem]">
-                  <span className="w-[0.7rem] h-[0.7rem] rounded-full bg-[#FF6600] inline-block" />
-                  <span className="text-[1.2rem] tracking-[0.12em] text-[#444] uppercase font-[500]">AceMQ Onboarding</span>
-                </div>
+                <p className="eyebrow mb-[2.4rem]">AceMQ Onboarding</p>
 
                 {/* Headline */}
-                <h1 className="text-[#000000] text-[4rem] leading-[1.15] font-[700] mb-[0.4rem]">
-                  Your AceMQ
-                </h1>
-                <h1 className="text-[#8FD5CC] text-[4rem] leading-[1.15] font-[700] mb-[2.4rem]">
-                  Onboarding Process
+                <h1 className="text-[#121316] text-[clamp(3.6rem,5vw,5.6rem)] leading-[1.02] font-[800] tracking-[-0.035em] mb-[2.4rem]">
+                  Your AceMQ <span className="hl">onboarding</span>, in one place
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-[#666] text-[1.6rem] leading-[1.7] max-w-[46rem] mx-auto mb-[4rem]">
+                <p className="text-[#5F6670] text-[clamp(1.7rem,1.4vw,2rem)] leading-[1.55] max-w-[52rem] mx-auto mb-[4rem]">
                   Complete your engagement, support portal, license, and AceMQ Broker setup in a single guided experience. You'll receive a branded PDF report on completion.
                 </p>
 
@@ -811,24 +803,24 @@ export default function CombinedOnboarding() {
                     { icon: '🔑', title: 'License Onboarding', desc: 'JFrog image access & portal provisioning' },
                     { icon: '📦', title: 'AceMQ Broker', desc: 'LTS broker builds via JFrog repo access' },
                   ].map(({ icon, title, desc }) => (
-                    <div key={title} className="border border-[rgba(0,0,0,0.08)] rounded-[1.4rem] bg-[#fafafa] px-[2rem] py-[2.4rem] flex flex-col items-center gap-[0.8rem]">
-                      <span className="text-[2.8rem]">{icon}</span>
-                      <p className="text-[1.5rem] font-[700] text-[#161616]">{title}</p>
-                      <p className="text-[1.25rem] text-[#888] leading-[1.5]">{desc}</p>
+                    <div key={title} className="border border-[#E9EBEE] rounded-[2rem] bg-white shadow-[var(--sh-1)] px-[2rem] py-[2.4rem] flex flex-col items-center gap-[0.8rem] text-center">
+                      <span className="w-[4.4rem] h-[4.4rem] rounded-[1.3rem] bg-[#FFF5EC] border border-[#FFE8D6] flex items-center justify-center text-[2.2rem]">{icon}</span>
+                      <p className="font-display text-[1.9rem] font-[700] tracking-[-0.01em] text-[#121316]">{title}</p>
+                      <p className="text-[1.25rem] text-[#757B85] leading-[1.5]">{desc}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* CTA */}
-                <BtnOrange onClick={goNext} className="text-[1.9rem] px-[5.6rem] py-[1.6rem]">
+                <BtnOrange onClick={goNext} className="min-h-[5.6rem] px-[3.6rem] text-[1.6rem]">
                   Get Started →
                 </BtnOrange>
 
                 {/* Footer pills */}
                 <div className="flex items-center justify-center flex-wrap gap-[2rem] mt-[2.4rem]">
                   {['~5 minutes', 'PDF report included', 'Select only what you need'].map(t => (
-                    <span key={t} className="flex items-center gap-[0.5rem] text-[1.2rem] text-[#999]">
-                      <svg className="w-[1.2rem] h-[1.2rem] stroke-[#27ae60] fill-none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <span key={t} className="flex items-center gap-[0.5rem] text-[1.2rem] text-[#757B85]">
+                      <svg className="w-[1.2rem] h-[1.2rem] stroke-[#236B61] fill-none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       {t}
@@ -841,7 +833,6 @@ export default function CombinedOnboarding() {
             {/* ── CONTACT INFO ── */}
             {currentStep === 'contact' && !submitted && (
               <div>
-                <div className="absolute top-0 left-0 right-0 h-[4px] bg-gradient-to-r from-[#FF6600] via-[#FF8C40] to-[#8FD5CC]" />
                 <SectionLabel>Step 1 — Contact Information</SectionLabel>
                 <QHead>Tell us about yourself</QHead>
                 <QSub>We'll use this to set up your account and send your onboarding report.</QSub>
@@ -853,7 +844,7 @@ export default function CombinedOnboarding() {
                 <TF type="email" placeholder="Work Email *" value={workEmail} onChange={e => setWorkEmail(e.target.value)} />
                 <TF placeholder="Job Title (optional)" value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
                 <TF type="tel" placeholder="Phone Number (optional)" value={phone} onChange={e => setPhone(e.target.value)} />
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   <BtnOrange
                     onClick={goNext}
@@ -900,7 +891,7 @@ export default function CombinedOnboarding() {
                     desc="Get access to the AceMQ Broker — our patched, long-term-supported RabbitMQ distribution — through JFrog."
                   />
                 </div>
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   <BtnOrange onClick={confirmServices} disabled={!anyServiceSelected}>
                     Continue →
@@ -922,14 +913,14 @@ export default function CombinedOnboarding() {
                 <QHead>Tell us about your engagement</QHead>
                 <QSub>Help us understand your team, goals, and scheduling so we can hit the ground running.</QSub>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Lead Stakeholder</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem]">Lead Stakeholder</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem]">
                   <TF placeholder="Lead Stakeholder Name" value={`${firstName} ${lastName}`.trim()} onChange={() => {}} />
                   <TF type="email" placeholder="Lead Stakeholder Email" value={workEmail} onChange={() => {}} />
                 </div>
                 <TF type="tel" placeholder="Lead Stakeholder Phone (optional)" value={phone} onChange={() => {}} />
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[1.6rem]">Engagement Participants *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[1.6rem]">Engagement Participants *</p>
                 <EngagementParticipantsEditor
                   ref={participantsEditorRef}
                   participants={engagementParticipants}
@@ -938,35 +929,35 @@ export default function CombinedOnboarding() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem] mt-[1.6rem]">
                   <div>
-                    <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Estimated Kickoff Date</p>
+                    <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem]">Estimated Kickoff Date</p>
                     <input type="date" value={kickoffDate} onChange={e => setKickoffDate(e.target.value)}
-                      className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all mb-[1rem]" />
+                      className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem]" />
                   </div>
                   <div>
-                    <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Team Time Zone</p>
+                    <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem]">Team Time Zone</p>
                     <select value={teamTimezone} onChange={e => setTeamTimezone(e.target.value)}
-                      className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all mb-[1rem] cursor-pointer">
+                      className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem] cursor-pointer">
                       <option value="">Select Timezone</option>
                       {TIMEZONE_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Engagement Session — Scheduling Preference *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem]">Engagement Session — Scheduling Preference *</p>
                 <select value={schedulingPref} onChange={e => setSchedulingPref(e.target.value)}
-                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all mb-[1rem] cursor-pointer">
+                  className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem] cursor-pointer">
                   <option value="">Please Select</option>
                   {SCHEDULING_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[1rem]">Engagement Session — Time Preference <span className="text-[#999] font-[400]">(optional)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[1rem]">Engagement Session — Time Preference <span className="text-[#757B85] font-[400]">(optional)</span></p>
                 <select value={timeSlotPref} onChange={e => setTimeSlotPref(e.target.value)}
-                  className="w-full bg-white border border-[rgba(0,0,0,0.12)] rounded-[1rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-black outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_3px_rgba(255,102,0,0.08)] transition-all mb-[1rem] cursor-pointer">
+                  className="w-full bg-white border border-[#DDE0E4] rounded-[1.2rem] px-[1.6rem] py-[1.3rem] text-[1.6rem] text-[#121316] outline-none focus:border-[#FF6600] focus:shadow-[0_0_0_4px_#FFE8D6] transition-all mb-[1rem] cursor-pointer">
                   <option value="">Please Select</option>
                   {TIME_SLOT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[1rem]">Other Comments or Details <span className="text-[#999] font-[400]">(optional)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[1rem]">Other Comments or Details <span className="text-[#757B85] font-[400]">(optional)</span></p>
                 <TA
                   placeholder="Any other context, constraints, or goals for this engagement…"
                   value={engagementDescription}
@@ -975,12 +966,12 @@ export default function CombinedOnboarding() {
                 />
 
                 {isLastStep && submitError && (
-                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
+                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[1.2rem] px-[1.4rem] py-[1rem]">
                     {submitError}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   {!isLastStep ? (
                     <BtnOrange onClick={goNext} disabled={engagementParticipants.length === 0 || !schedulingPref}>
@@ -1008,25 +999,25 @@ export default function CombinedOnboarding() {
                 <QHead>Technical configuration</QHead>
                 <QSub>This helps us deliver the right license for your infrastructure.</QSub>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[0.6rem]">CPU Core Count *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[0.6rem]">CPU Core Count *</p>
                 <TF placeholder="e.g. 16" value={cpuCoreCount} onChange={e => setCpuCoreCount(e.target.value)} />
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[0.6rem]">CPU Core Type *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[0.6rem]">CPU Core Type *</p>
                 {['vCPU', 'Physical CPU'].map(opt => (
                   <Choice key={opt} selected={cpuCoreType === opt} onClick={() => setCpuCoreType(opt)}>{opt}</Choice>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Deployment Environment *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2rem]">Deployment Environment *</p>
                 {DEPLOYMENT_ENV_OPTIONS.map(opt => (
                   <Choice key={opt} selected={deploymentEnv === opt} onClick={() => setDeploymentEnv(opt)}>{opt}</Choice>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">RabbitMQ Product *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2rem]">RabbitMQ Product *</p>
                 {RABBITMQ_PRODUCT_OPTIONS.map(opt => (
                   <Choice key={opt} selected={rmqProduct === opt} onClick={() => setRmqProduct(opt)}>{opt}</Choice>
                 ))}
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   <BtnOrange onClick={goNext} disabled={!cpuCoreCount.trim() || !cpuCoreType || !deploymentEnv || !rmqProduct}>
                     Continue →
@@ -1042,22 +1033,22 @@ export default function CombinedOnboarding() {
                 <QHead>Usage & packaging</QHead>
                 <QSub>Select all that apply to help us configure the right license scope.</QSub>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Environment Use <span className="text-[#999] font-[400]">(select all that apply)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem]">Environment Use <span className="text-[#757B85] font-[400]">(select all that apply)</span></p>
                 {ENVIRONMENT_USE_OPTIONS.map(opt => (
                   <Chip key={opt} selected={envUse.includes(opt)} onClick={() => toggleArr(envUse, setEnvUse, opt)}>{opt}</Chip>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2.4rem]">Packaging Format <span className="text-[#999] font-[400]">(select all that apply)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2.4rem]">Packaging Format <span className="text-[#757B85] font-[400]">(select all that apply)</span></p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem]">
                   {PACKAGING_FORMAT_OPTIONS.map(opt => (
                     <Chip key={opt} selected={packaging.includes(opt)} onClick={() => toggleArr(packaging, setPackaging, opt)}>{opt}</Chip>
                   ))}
                 </div>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2.4rem]">Additional Comments <span className="text-[#999] font-[400]">(optional)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2.4rem]">Additional Comments <span className="text-[#757B85] font-[400]">(optional)</span></p>
                 <TA placeholder="Any other details about your environment or requirements…" value={comments} onChange={e => setComments(e.target.value)} />
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   <BtnOrange onClick={goNext} disabled={envUse.length === 0 || packaging.length === 0}>
                     Continue →
@@ -1077,12 +1068,12 @@ export default function CombinedOnboarding() {
                 </QSub>
 
                 {/* JFrog Pull Guide reference panel */}
-                <div className="bg-[#f8f8f8] border border-[rgba(0,0,0,0.08)] rounded-[1.4rem] p-[2rem] mb-[2.8rem]">
+                <div className="bg-[#F6F6F7] border border-[#E9EBEE] rounded-[1.4rem] p-[2rem] mb-[2.8rem]">
                   <div className="flex items-start gap-[1.4rem]">
                     <span className="text-[2.4rem] mt-[0.2rem] flex-shrink-0">📦</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[1.5rem] font-[700] text-[#161616] mb-[0.5rem]">Your report includes a complete JFrog Pull Guide</p>
-                      <p className="text-[1.3rem] text-[#666] leading-[1.6] mb-[1.4rem]">Once credentials are issued, your PDF onboarding report will contain step-by-step instructions for pulling Tanzu RabbitMQ images through AceMQ's JFrog Artifactory cache — including:</p>
+                      <p className="text-[1.5rem] font-[700] text-[#121316] mb-[0.5rem]">Your report includes a complete JFrog Pull Guide</p>
+                      <p className="text-[1.3rem] text-[#5F6670] leading-[1.6] mb-[1.4rem]">Once credentials are issued, your PDF onboarding report will contain step-by-step instructions for pulling Tanzu RabbitMQ images through AceMQ's JFrog Artifactory cache — including:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1.5rem] gap-y-[0.5rem] mb-[1.6rem]">
                         {[
                           'Generate a scoped JFrog access token',
@@ -1092,15 +1083,15 @@ export default function CombinedOnboarding() {
                           'Helm values.yaml override for AceMQ cache',
                           'Pin images by SHA256 digest for compliance',
                         ].map(item => (
-                          <div key={item} className="flex items-start gap-[0.7rem] text-[1.25rem] text-[#444]">
+                          <div key={item} className="flex items-start gap-[0.7rem] text-[1.25rem] text-[#1F2125]">
                             <span className="text-[#FF6600] font-[700] flex-shrink-0 mt-[0.1rem]">→</span>
                             <span>{item}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[0.8rem] px-[1.4rem] py-[1rem]">
-                        <p className="text-[1.1rem] font-[700] text-[#999] uppercase tracking-[0.06em] mb-[0.4rem]">Registry endpoint</p>
-                        <code className="text-[1.35rem] text-[#161616] font-[600]">acemq.jfrog.io / rabbitmq-docker-remote / vmware-tanzu-rabbitmq</code>
+                      <div className="bg-white border border-[#E9EBEE] rounded-[0.8rem] px-[1.4rem] py-[1rem]">
+                        <p className="text-[1.1rem] font-[700] text-[#757B85] uppercase tracking-[0.06em] mb-[0.4rem]">Registry endpoint</p>
+                        <code className="text-[1.35rem] text-[#121316] font-[600]">acemq.jfrog.io / rabbitmq-docker-remote / vmware-tanzu-rabbitmq</code>
                       </div>
                     </div>
                   </div>
@@ -1109,12 +1100,12 @@ export default function CombinedOnboarding() {
                 <EmailTagInput ref={portalEmailsRef} emails={portalEmails} setEmails={setPortalEmails} />
 
                 {isLastStep && submitError && (
-                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
+                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[1.2rem] px-[1.4rem] py-[1rem]">
                     {submitError}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   {!isLastStep ? (
                     <BtnOrange onClick={goNext}>Continue →</BtnOrange>
@@ -1140,31 +1131,42 @@ export default function CombinedOnboarding() {
                 <QHead>Your broker environment</QHead>
                 <QSub>Tell us where the AceMQ Broker will run so we can give you the right builds.</QSub>
 
-                <div className="bg-[#fafafa] border border-[rgba(0,0,0,0.08)] rounded-[1rem] px-[1.6rem] py-[1.2rem] mb-[2rem]">
-                  <p className="text-[1.1rem] font-[700] text-[#999] uppercase tracking-[0.06em] mb-[0.2rem]">Product</p>
-                  <p className="text-[1.5rem] font-[700] text-[#161616]">AceMQ Broker <span className="text-[#999] font-[400] text-[1.3rem]">— current LTS release</span></p>
+                <div className="bg-[#FAFAFB] border border-[#E9EBEE] rounded-[1rem] px-[1.6rem] py-[1.2rem] mb-[2rem]">
+                  <p className="text-[1.1rem] font-[700] text-[#757B85] uppercase tracking-[0.06em] mb-[0.2rem]">Product</p>
+                  <p className="text-[1.5rem] font-[700] text-[#121316]">AceMQ Broker <span className="text-[#757B85] font-[400] text-[1.3rem]">— current LTS release</span></p>
                 </div>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Deployment Environment *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[0.4rem]">License Type *</p>
+                <p className="text-[1.3rem] text-[#5F6670] mb-[1rem]">Are you evaluating AceMQ Broker, or are you a paying customer? This decides which builds you can download.</p>
+                {BROKER_LICENSE_OPTIONS.map(opt => (
+                  <Choice key={opt.value} selected={broker.licenseType === opt.value} onClick={() => setB('licenseType', opt.value)}>
+                    <span>
+                      <span className="block font-[700]">{opt.title}</span>
+                      <span className="block text-[1.3rem] text-[#5F6670]">{opt.desc}</span>
+                    </span>
+                  </Choice>
+                ))}
+
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2.4rem]">Deployment Environment *</p>
                 {DEPLOYMENT_ENV_OPTIONS.map(opt => (
                   <Choice key={opt} selected={broker.deploymentEnv === opt} onClick={() => setB('deploymentEnv', opt)}>{opt}</Choice>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Environment Use * <span className="text-[#999] font-[400]">(select all that apply)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2rem]">Environment Use * <span className="text-[#757B85] font-[400]">(select all that apply)</span></p>
                 {ENVIRONMENT_USE_OPTIONS.map(opt => (
                   <Chip key={opt} selected={broker.envUse.includes(opt)} onClick={() => toggleB('envUse', opt)}>{opt}</Chip>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2.4rem]">Packaging Format * <span className="text-[#999] font-[400]">(select all that apply)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2.4rem]">Packaging Format * <span className="text-[#757B85] font-[400]">(select all that apply)</span></p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[1rem]">
                   {BROKER_PACKAGING_OPTIONS.map(opt => (
                     <Chip key={opt} selected={broker.packaging.includes(opt)} onClick={() => toggleB('packaging', opt)}>{opt}</Chip>
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
-                  <BtnOrange onClick={goNext} disabled={!broker.deploymentEnv || broker.envUse.length === 0 || broker.packaging.length === 0}>
+                  <BtnOrange onClick={goNext} disabled={!broker.licenseType || !broker.deploymentEnv || broker.envUse.length === 0 || broker.packaging.length === 0}>
                     Continue →
                   </BtnOrange>
                 </div>
@@ -1178,25 +1180,25 @@ export default function CombinedOnboarding() {
                 <QHead>Go-live readiness</QHead>
                 <QSub>This helps us plan your installation or migration path.</QSub>
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem]">Is this a migration or a new installation? *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem]">Is this a migration or a new installation? *</p>
                 {BROKER_INSTALL_TYPE_OPTIONS.map(opt => (
                   <Choice key={opt} selected={broker.installType === opt} onClick={() => setB('installType', opt)}>{opt}</Choice>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Can your environment support full downtime during cutover? *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2rem]">Can your environment support full downtime during cutover? *</p>
                 {YES_NO_UNSURE.map(opt => (
                   <Choice key={opt} selected={broker.downtime === opt} onClick={() => setB('downtime', opt)}>{opt}</Choice>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2rem]">Do you have multiple environments available for a blue/green migration? *</p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2rem]">Do you have multiple environments available for a blue/green migration? *</p>
                 {YES_NO_UNSURE.map(opt => (
                   <Choice key={opt} selected={broker.blueGreen === opt} onClick={() => setB('blueGreen', opt)}>{opt}</Choice>
                 ))}
 
-                <p className="text-[1.4rem] font-[600] text-[#161616] mb-[1rem] mt-[2.4rem]">Additional Comments <span className="text-[#999] font-[400]">(optional)</span></p>
+                <p className="text-[1.4rem] font-[600] text-[#121316] mb-[1rem] mt-[2.4rem]">Additional Comments <span className="text-[#757B85] font-[400]">(optional)</span></p>
                 <TA placeholder="Current RabbitMQ / Erlang versions, OS, cluster layout, timelines…" value={broker.comments} onChange={e => setB('comments', e.target.value)} />
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   <BtnOrange onClick={goNext} disabled={!broker.installType || !broker.downtime || !broker.blueGreen}>
                     Continue →
@@ -1215,12 +1217,12 @@ export default function CombinedOnboarding() {
                   <span className="text-[#FF6600]">{workEmail}</span> is included automatically.
                 </QSub>
 
-                <div className="bg-[#f8f8f8] border border-[rgba(0,0,0,0.08)] rounded-[1.4rem] p-[2rem] mb-[2.8rem]">
+                <div className="bg-[#F6F6F7] border border-[#E9EBEE] rounded-[1.4rem] p-[2rem] mb-[2.8rem]">
                   <div className="flex items-start gap-[1.4rem]">
                     <span className="text-[2.4rem] mt-[0.2rem] flex-shrink-0">📦</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[1.5rem] font-[700] text-[#161616] mb-[0.5rem]">JFrog access to the AceMQ Broker repository</p>
-                      <p className="text-[1.3rem] text-[#666] leading-[1.6]">Each person gets an AceMQ Artifactory login scoped to the AceMQ Broker repository only. New users receive a temporary password by email; existing users can sign in with their current credentials.</p>
+                      <p className="text-[1.5rem] font-[700] text-[#121316] mb-[0.5rem]">JFrog access to the AceMQ Broker repository</p>
+                      <p className="text-[1.3rem] text-[#5F6670] leading-[1.6]">Each person gets an AceMQ Artifactory login scoped to the AceMQ Broker project only ({broker.licenseType === 'commercial' ? 'commercial' : 'evaluation (NFR)'} builds). New users receive a temporary password by email; existing users can sign in with their current credentials.</p>
                     </div>
                   </div>
                 </div>
@@ -1228,12 +1230,12 @@ export default function CombinedOnboarding() {
                 <EmailTagInput ref={brokerEmailsRef} emails={brokerUsers} setEmails={setBrokerUsers} />
 
                 {isLastStep && submitError && (
-                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
+                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[1.2rem] px-[1.4rem] py-[1rem]">
                     {submitError}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   {!isLastStep ? (
                     <BtnOrange onClick={goNext}>Continue →</BtnOrange>
@@ -1252,7 +1254,7 @@ export default function CombinedOnboarding() {
                 <SectionHeader
                   icon="🎫"
                   label="Support Portal Onboarding"
-                  accent="#161616"
+                  accent="#121316"
                   stepLabel="Section — Support"
                   steps={remainingSteps}
                 />
@@ -1265,12 +1267,12 @@ export default function CombinedOnboarding() {
                 <SupportUsersEditor users={supportUsers} setUsers={setSupportUsers} />
 
                 {submitError && (
-                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[0.8rem] px-[1.2rem] py-[0.8rem]">
+                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[1.2rem] px-[1.4rem] py-[1rem]">
                     {submitError}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   <BtnOrange onClick={handleSubmit} disabled={submitting || supportUsers.length === 0}>
                     {submitting ? (
@@ -1299,30 +1301,30 @@ export default function CombinedOnboarding() {
                   {services.engagement && (
                     <div className="flex items-center gap-[1.2rem] bg-[rgba(255,102,0,0.04)] border border-[rgba(255,102,0,0.15)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
                       <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(255,102,0,0.3)] border-t-[#FF6600] animate-spin flex-shrink-0" />
-                      <span className="text-[1.4rem] text-[#444]">Creating engagement portal…</span>
+                      <span className="text-[1.4rem] text-[#1F2125]">Creating engagement portal…</span>
                     </div>
                   )}
                   {services.license && (
                     <div className="flex items-center gap-[1.2rem] bg-[rgba(91,184,173,0.06)] border border-[rgba(91,184,173,0.2)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
                       <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(91,184,173,0.3)] border-t-[#5bb8ad] animate-spin flex-shrink-0" />
-                      <span className="text-[1.4rem] text-[#444]">Provisioning JFrog access…</span>
+                      <span className="text-[1.4rem] text-[#1F2125]">Provisioning JFrog access…</span>
                     </div>
                   )}
                   {services.broker && (
                     <div className="flex items-center gap-[1.2rem] bg-[rgba(196,82,0,0.05)] border border-[rgba(196,82,0,0.2)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
                       <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(196,82,0,0.3)] border-t-[#c45200] animate-spin flex-shrink-0" />
-                      <span className="text-[1.4rem] text-[#444]">Granting AceMQ Broker repo access…</span>
+                      <span className="text-[1.4rem] text-[#1F2125]">Granting AceMQ Broker repo access…</span>
                     </div>
                   )}
                   {services.support && (
                     <div className="flex items-center gap-[1.2rem] bg-[rgba(22,22,22,0.04)] border border-[rgba(22,22,22,0.1)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
-                      <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(22,22,22,0.15)] border-t-[#161616] animate-spin flex-shrink-0" />
-                      <span className="text-[1.4rem] text-[#444]">Setting up support portal…</span>
+                      <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(22,22,22,0.15)] border-t-[#121316] animate-spin flex-shrink-0" />
+                      <span className="text-[1.4rem] text-[#1F2125]">Setting up support portal…</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-[1.2rem] bg-white border border-[rgba(0,0,0,0.08)] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
-                    <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[rgba(0,0,0,0.1)] border-t-[#888] animate-spin flex-shrink-0" />
-                    <span className="text-[1.4rem] text-[#444]">Generating your PDF report…</span>
+                  <div className="flex items-center gap-[1.2rem] bg-white border border-[#E9EBEE] rounded-[1rem] px-[1.6rem] py-[1.2rem]">
+                    <div className="w-[1.6rem] h-[1.6rem] rounded-full border-[2px] border-[#E9EBEE] border-t-[#757B85] animate-spin flex-shrink-0" />
+                    <span className="text-[1.4rem] text-[#1F2125]">Generating your PDF report…</span>
                   </div>
                 </div>
               </div>
@@ -1331,7 +1333,7 @@ export default function CombinedOnboarding() {
             {submitted && (
               <div className="text-center py-[2rem]">
                 <div className="w-[6rem] h-[6rem] bg-[rgba(39,174,96,0.1)] rounded-full flex items-center justify-center mx-auto mb-[2rem]">
-                  <svg className="w-[3rem] h-[3rem] stroke-[#27ae60] fill-none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <svg className="w-[3rem] h-[3rem] stroke-[#236B61] fill-none" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
@@ -1343,8 +1345,8 @@ export default function CombinedOnboarding() {
 
                 <div className="bg-[rgba(255,102,0,0.04)] border border-[rgba(255,102,0,0.2)] rounded-[1.6rem] p-[2.4rem] mb-[2rem] max-w-[50rem] mx-auto">
                   <div className="text-[2.4rem] mb-[1rem]">📄</div>
-                  <p className="text-[1.6rem] font-[700] text-[#161616] mb-[0.6rem]">Download Your Onboarding Report</p>
-                  <p className="text-[1.3rem] text-[#666] mb-[2rem]">
+                  <p className="text-[1.6rem] font-[700] text-[#121316] mb-[0.6rem]">Download Your Onboarding Report</p>
+                  <p className="text-[1.3rem] text-[#5F6670] mb-[2rem]">
                     Your AceMQ-branded PDF has been emailed to our team. Download a copy for your records.
                   </p>
                   <BtnOrange onClick={handleDownloadPDF} className="mx-auto">
@@ -1353,28 +1355,28 @@ export default function CombinedOnboarding() {
                 </div>
 
                 <div className="bg-[rgba(143,213,204,0.07)] border border-[rgba(143,213,204,0.3)] rounded-[1.2rem] p-[1.6rem] max-w-[50rem] mx-auto mb-[2rem] text-left">
-                  <p className="text-[1.3rem] font-[700] text-[#161616] mb-[0.8rem]">What happens next?</p>
+                  <p className="text-[1.3rem] font-[700] text-[#121316] mb-[0.8rem]">What happens next?</p>
                   <div className="flex flex-col gap-[0.6rem]">
                     {services.engagement && (
-                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#444]">
+                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#1F2125]">
                         <span className="text-[#FF6600] font-[700] flex-shrink-0">🤝</span>
                         <span>Our Program Manager will align a kickoff call.</span>
                       </div>
                     )}
                     {services.support && (
-                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#444]">
+                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#1F2125]">
                         <span className="text-[#FF6600] font-[700] flex-shrink-0">🎫</span>
                         <span>Portal invitation emails sent to all support users within 1 business day.</span>
                       </div>
                     )}
                     {services.license && (
-                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#444]">
+                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#1F2125]">
                         <span className="text-[#FF6600] font-[700] flex-shrink-0">🔑</span>
                         <span>Your license configuration is being processed. JFrog access will be set up.</span>
                       </div>
                     )}
                     {services.broker && (
-                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#444]">
+                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#1F2125]">
                         <span className="text-[#FF6600] font-[700] flex-shrink-0">📦</span>
                         <span>AceMQ Broker repository credentials are being emailed to each user you listed.</span>
                       </div>
@@ -1382,7 +1384,7 @@ export default function CombinedOnboarding() {
                   </div>
                 </div>
 
-                <p className="text-[1.3rem] text-[#999]">
+                <p className="text-[1.3rem] text-[#757B85]">
                   Questions? Email{' '}
                   <a href="mailto:onboarding@acemq.com" className="text-[#FF6600] hover:underline">onboarding@acemq.com</a>
                   {' '}or call +1 305-204-2607

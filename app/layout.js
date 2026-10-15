@@ -1,10 +1,17 @@
+import { Urbanist } from 'next/font/google';
 import localFont from 'next/font/local';
 import './globals.css';
 
-const skModernist = localFont({
-  src: [{ path: './fonts/Sk-Modernist-Regular.otf', weight: '400', style: 'normal' }],
+// Same faces as the acemq.com "ace26" kit: Urbanist for display, Mona Sans for body/UI.
+const urbanist = Urbanist({ subsets: ['latin'], weight: ['600', '700', '800'], display: 'swap', variable: '--font-urbanist' });
+const mona = localFont({
+  src: [
+    { path: './fonts/Mona-Sans-Light.woff',    weight: '400', style: 'normal' },
+    { path: './fonts/Mona-Sans-Medium.woff',   weight: '500', style: 'normal' },
+    { path: './fonts/Mona-Sans-SemiBold.woff', weight: '600', style: 'normal' },
+  ],
   display: 'swap',
-  variable: '--font-sk-modernist',
+  variable: '--font-mona',
 });
 
 export const metadata = {
@@ -15,8 +22,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={skModernist.className} suppressHydrationWarning>
+    <html lang="en" className={`${urbanist.variable} ${mona.variable}`}>
+      <body suppressHydrationWarning>
         {children}
       </body>
     </html>

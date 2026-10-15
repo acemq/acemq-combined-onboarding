@@ -195,6 +195,7 @@ function brokerRows(b) {
   if (!b) return [];
   return [
     ['Product',            'AceMQ Broker (current LTS)'],
+    ['License Type',       b.licenseType === 'commercial' ? 'Commercial (paying customer)' : 'Evaluation / NFR trial'],
     ['Deployment',         b.deploymentEnv],
     ['Environment Use',    (b.envUse || []).join(', ')],
     ['Packaging',          (b.packaging || []).join(', ')],
@@ -656,7 +657,7 @@ function buildCustomerEmailHtml({ submitter, company, services, engagementPartic
       </table>
       <p style="margin:12px 0 6px;font-size:12px;font-weight:700;color:#161616;">Repository Access</p>
       <p style="margin:0;font-size:13px;color:#FF6600;">${users.map(esc).join('<br>')}</p>
-      <p style="margin:12px 0 0;font-size:13px;color:#666;">Each person above will receive a separate email with their AceMQ Artifactory login for the AceMQ Broker repository.</p>
+      <p style="margin:12px 0 0;font-size:13px;color:#666;">Each person above will receive a separate email with their AceMQ Artifactory login for the AceMQ Broker project. Full documentation is at <a href="https://broker.acemq.com" style="color:#FF6600;">broker.acemq.com</a>.</p>
     </div>`;
   }
 
@@ -1024,7 +1025,7 @@ async function buildReportPdf({
       y -= 13;
     });
     y -= 8;
-    drawTextBlock('Each user receives an AceMQ Artifactory login (acemq.jfrog.io) scoped to the AceMQ Broker repository. New users get a temporary password by email and are prompted to change it on first login.');
+    drawTextBlock('Each user receives an AceMQ Artifactory login (acemq.jfrog.io) scoped to the AceMQ Broker project. New users get a temporary password by email and are prompted to change it on first login. Full documentation: broker.acemq.com');
 
     if (broker.comments?.trim()) {
       drawSubHead('Additional Comments');
@@ -1088,12 +1089,15 @@ const JFROG_REPOS = [
 ];
 
 // license: per-company group + permission over the Tanzu/OSS repos.
-// broker:  one shared, pre-built group in the "AceMQ Broker" JFrog project. Its permission
-//          (acemq-broker-customer-read, managed in JFrog) grants read on
-//          acemq-broker-releases-local + acemq-broker-docker-local only — staging stays hidden.
+// broker:  shared, pre-built groups in the "AceMQ Broker" JFrog project, picked by the license
+//          type the customer chose. Their permissions (managed in JFrog) grant read on one folder
+//          of acemq-broker-releases-local + acemq-broker-docker-local — staging stays hidden:
+//            nfr        → acemq-broker-nfr        / acemq-broker-nfr-read        → nfr-distribution/**
+//            commercial → acemq-broker-commercial / acemq-broker-commercial-read → commercial-distribution/**
 const JFROG_PRODUCTS = {
   license: { label: 'RabbitMQ license', groupPrefix: 'customer', permSuffix: 'rmq-access', repos: JFROG_REPOS, actions: ['read', 'write'], attachGuide: true },
-  broker:  { label: 'AceMQ Broker', sharedGroup: 'acemq-broker-customers', sharedPerm: 'acemq-broker-customer-read', attachGuide: false },
+  broker:           { label: 'AceMQ Broker', sharedGroup: 'acemq-broker-nfr',        sharedPerm: 'acemq-broker-nfr-read',        attachGuide: false, docsUrl: 'https://broker.acemq.com' },
+  brokerCommercial: { label: 'AceMQ Broker', sharedGroup: 'acemq-broker-commercial', sharedPerm: 'acemq-broker-commercial-read', attachGuide: false, docsUrl: 'https://broker.acemq.com' },
 };
 
 const MAX_JFROG_USERS = 25;
@@ -1158,7 +1162,10 @@ async function sendJFrogInviteEmail(email, tempPwd, company, product) {
           </tr>` : '';
   const postLoginNote = tempPwd
     ? `<p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.5;">You will be prompted to change your password after your first login.</p>`
-    : `<p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.5;">Log in with your existing AceMQ Artifactory credentials. The pull guide attached to this email has step-by-step instructions.</p>`;
+    : `<p style="margin:20px 0 0;font-size:13px;color:#888;line-height:1.5;">Log in with your existing AceMQ Artifactory credentials.${product.attachGuide ? ' The pull guide attached to this email has step-by-step instructions.' : ''}</p>`;
+  const docsNote = product.docsUrl
+    ? `<p style="margin:20px 0 0;font-size:14px;line-height:1.6;">Full installation and usage documentation: <a href="${product.docsUrl}" style="color:#FF6B00;">${product.docsUrl.replace('https://', '')}</a></p>`
+    : '';
 
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
@@ -1187,6 +1194,7 @@ async function sendJFrogInviteEmail(email, tempPwd, company, product) {
           Log In to AceMQ Artifactory →
         </a>
         ${postLoginNote}
+        ${docsNote}
         <hr style="margin:32px 0;border:none;border-top:1px solid #eee;">
         <p style="margin:0;font-size:13px;color:#888;">
           AceMQ · an ace8 company<br>
@@ -1664,7 +1672,8 @@ export async function POST(request) {
           company,
           submitterEmail: submitter.email,
           portalUsers: broker?.users || [],
-          kind: 'broker',
+          // Only an explicit 'commercial' answer gets commercial builds; anything else is NFR.
+          kind: broker?.licenseType === 'commercial' ? 'brokerCommercial' : 'broker',
         });
         brokerJfrogResult.failed.forEach(f => errors.push(`JFrog Broker: ${f}`));
         console.log(`JFrog Broker: group=${brokerJfrogResult.groupName} invited=${brokerJfrogResult.invited.length} updated=${brokerJfrogResult.updated.length} failed=${brokerJfrogResult.failed.length}`);
