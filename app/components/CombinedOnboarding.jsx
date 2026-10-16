@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -125,6 +125,7 @@ function buildStepList(services) {
     list.push('broker-tech');
     list.push('broker-golive');
     list.push('broker-users');
+    list.push('broker-support');
   }
   if (services.support) list.push('support-users');
   return list;
@@ -149,6 +150,7 @@ const STEP_LABELS = {
   'broker-tech':   'Broker environment',
   'broker-golive': 'Go-live readiness',
   'broker-users':  'Repo access',
+  'broker-support': 'Support access',
   'support-users': 'Support users',
 };
 
@@ -638,6 +640,9 @@ export default function CombinedOnboarding() {
     installType: '', downtime: '', blueGreen: '', comments: '',
   });
   const [brokerUsers, setBrokerUsers] = useState([]);
+  const brokerSupportRef = useRef(null);
+  const [brokerSupportUsers, setBrokerSupportUsers] = useState([]);
+  const supportSeenRef = useRef(new Set()); // emails already offered on the Jira support step
   const setB = (k, v) => setBroker(b => ({ ...b, [k]: v }));
   const toggleB = (k, v) => setBroker(b => ({ ...b, [k]: b[k].includes(v) ? b[k].filter(x => x !== v) : [...b[k], v] }));
 
@@ -664,6 +669,16 @@ export default function CombinedOnboarding() {
   const isLastStep = stepIdx === stepList.length - 1;
   const remainingSteps = stepList.slice(stepIdx).filter(s => s !== 'contact' && s !== 'services').map(s => STEP_LABELS[s]).filter(Boolean);
   const showRail = !isIntro && !submitted && !processing;
+
+  // Jira support step: default to the submitter + repo-access emails. Each email is offered once,
+  // so removals stick and repo users added later get merged in without wiping edits.
+  useEffect(() => {
+    if (currentStep !== 'broker-support') return;
+    const fresh = [workEmail.trim(), ...brokerUsers].filter(e => e && !supportSeenRef.current.has(e.toLowerCase()));
+    if (fresh.length === 0) return;
+    fresh.forEach(e => supportSeenRef.current.add(e.toLowerCase()));
+    setBrokerSupportUsers(prev => [...prev, ...fresh.filter(e => !prev.some(p => p.toLowerCase() === e.toLowerCase()))]);
+  }, [currentStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -692,6 +707,8 @@ export default function CombinedOnboarding() {
     const allPortalEmails = flushedEmail ? [...portalEmails, flushedEmail] : portalEmails;
     const flushedBrokerEmail = brokerEmailsRef.current?.tryFlushInput() ?? null;
     const allBrokerUsers = flushedBrokerEmail ? [...brokerUsers, flushedBrokerEmail] : brokerUsers;
+    const flushedSupportEmail = brokerSupportRef.current?.tryFlushInput() ?? null;
+    const allBrokerSupportUsers = flushedSupportEmail ? [...brokerSupportUsers, flushedSupportEmail] : brokerSupportUsers;
 
     setSubmitting(true);
     setProcessing(true);
@@ -717,7 +734,7 @@ export default function CombinedOnboarding() {
           comments,
           portalUsers: allPortalEmails,
           supportUsers,
-          broker: services.broker ? { ...broker, users: allBrokerUsers } : undefined,
+          broker: services.broker ? { ...broker, users: allBrokerUsers, supportUsers: allBrokerSupportUsers } : undefined,
         }),
       });
 
@@ -1289,9 +1306,49 @@ export default function CombinedOnboarding() {
                 <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
                   <BtnGhost onClick={goBack}>← Back</BtnGhost>
                   {!isLastStep ? (
-                    <BtnOrange onClick={goNext}>Continue →</BtnOrange>
+                    <BtnOrange onClick={() => { brokerEmailsRef.current?.tryFlushInput(); goNext(); }}>Continue →</BtnOrange>
                   ) : (
                     <BtnOrange onClick={handleSubmit} disabled={submitting}>
+                      {submitting ? 'Submitting…' : 'Submit & Get Report →'}
+                    </BtnOrange>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── ACEMQ BROKER — JIRA SUPPORT ACCESS ── */}
+            {currentStep === 'broker-support' && !submitted && (
+              <div>
+                <SectionLabel>AceMQ Broker Onboarding</SectionLabel>
+                <QHead>Who needs support access?</QHead>
+                <QSub>
+                  We've started this list with you and your repo-access users. Remove anyone who doesn't need it, or add more teammates.
+                </QSub>
+
+                <div className="bg-[#F6F6F7] border border-[#E9EBEE] rounded-[1.4rem] p-[2rem] mb-[2.8rem]">
+                  <div className="flex items-start gap-[1.4rem]">
+                    <span className="text-[2.4rem] mt-[0.2rem] flex-shrink-0">🎫</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[1.5rem] font-[700] text-[#121316] mb-[0.5rem]">AceMQ Broker Support help center</p>
+                      <p className="text-[1.3rem] text-[#5F6670] leading-[1.6]">Each person is added to your company's organization in the AceMQ Broker Support project in Jira, so they can open and follow support requests. We'll email you the login steps.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <EmailTagInput ref={brokerSupportRef} emails={brokerSupportUsers} setEmails={setBrokerSupportUsers} />
+
+                {isLastStep && submitError && (
+                  <p className="text-[#c0392b] text-[1.3rem] mt-[1rem] bg-[rgba(192,57,43,0.07)] border border-[rgba(192,57,43,0.2)] rounded-[1.2rem] px-[1.4rem] py-[1rem]">
+                    {submitError}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-between mt-[3rem] pt-[2.2rem] border-t border-[#E9EBEE]">
+                  <BtnGhost onClick={goBack}>← Back</BtnGhost>
+                  {!isLastStep ? (
+                    <BtnOrange onClick={() => { brokerSupportRef.current?.tryFlushInput(); goNext(); }} disabled={brokerSupportUsers.length === 0}>Continue →</BtnOrange>
+                  ) : (
+                    <BtnOrange onClick={handleSubmit} disabled={submitting || brokerSupportUsers.length === 0}>
                       {submitting ? 'Submitting…' : 'Submit & Get Report →'}
                     </BtnOrange>
                   )}
@@ -1430,6 +1487,12 @@ export default function CombinedOnboarding() {
                       <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#1F2125]">
                         <span className="text-[#FF6600] font-[700] flex-shrink-0">📦</span>
                         <span>AceMQ Broker repository credentials are being emailed to each user you listed.</span>
+                      </div>
+                    )}
+                    {services.broker && (
+                      <div className="flex items-start gap-[0.8rem] text-[1.3rem] text-[#1F2125]">
+                        <span className="text-[#FF6600] font-[700] flex-shrink-0">🎫</span>
+                        <span>Your AceMQ Broker Support help center login steps are in your confirmation email.</span>
                       </div>
                     )}
                   </div>

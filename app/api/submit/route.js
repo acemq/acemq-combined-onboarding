@@ -17,6 +17,10 @@ const JIRA_BASE_URL       = process.env.JIRA_BASE_URL        || 'https://acemq.a
 const JIRA_EMAIL_ADDR     = process.env.JIRA_EMAIL;
 const JIRA_API_TOKEN      = process.env.JIRA_API_TOKEN;
 const JIRA_SERVICE_DESK_ID = process.env.JIRA_SERVICE_DESK_ID || '1';
+// "AceMQ Broker Support" service desk (project key ABS). Verified by name before use.
+const JIRA_BROKER_DESK_ID   = process.env.JIRA_BROKER_SERVICE_DESK_ID || '68';
+const JIRA_BROKER_DESK_NAME = 'AceMQ Broker Support';
+const BROKER_SUPPORT_URL    = `${JIRA_BASE_URL}/servicedesk/customer/portal/${JIRA_BROKER_DESK_ID}`;
 
 const FUSEBASE_TOKEN             = process.env.FUSEBASE_API_TOKEN;
 const FUSEBASE_ORG_ID            = process.env.FUSEBASE_ORG_ID            || 'u25yx9';
@@ -205,6 +209,19 @@ function brokerRows(b) {
   ].filter(([, v]) => v);
 }
 
+// Emails who get AceMQ Broker Support (JSM) access — trimmed and de-duplicated, order kept.
+const brokerSupportEmails = (b) => {
+  const seen = new Set();
+  return (b?.supportUsers || []).map(e => String(e || '').trim()).filter(e => e && !seen.has(e.toLowerCase()) && seen.add(e.toLowerCase()));
+};
+
+// Login steps for the AceMQ Broker Support help center — shared by both emails and the PDF.
+const BROKER_SUPPORT_STEPS = [
+  `Open the AceMQ Broker Support help center at ${BROKER_SUPPORT_URL} and sign in with the email address listed here.`,
+  'New to our help center? Accept the invitation email from Atlassian (check spam) to set a password, or choose "Can\'t log in?" on the sign-in page to set one. If you already have an Atlassian account, just sign in with it.',
+  'Once signed in, choose a request type, describe the issue, and submit. You can follow every request under "Requests".',
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Mailjet helper
 // ─────────────────────────────────────────────────────────────────────────────
@@ -299,6 +316,7 @@ function buildNoteBody({ submitter, company, services,
     note += `--- ACEMQ BROKER ---\n`;
     brokerRows(broker).forEach(([l, v]) => { note += `${l}: ${v}\n`; });
     if (broker.users?.length) note += `Repo Users: ${broker.users.join(', ')}\n`;
+    if (brokerSupportEmails(broker).length) note += `Broker Support Users: ${brokerSupportEmails(broker).join(', ')}\n`;
     if (broker.comments) note += `Comments: ${broker.comments}\n`;
     note += '\n';
   }
@@ -435,7 +453,7 @@ function buildInternalEmailHtml({
   fusebaseResult, fusebaseError,
   jfrogResult, jfrogError,
   jsmResult, jsmError,
-  broker, brokerJfrogResult, brokerJfrogError,
+  broker, brokerJfrogResult, brokerJfrogError, brokerJsmResult, brokerJsmError,
   pdfGenerated,
 }) {
   const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -617,7 +635,39 @@ function buildInternalEmailHtml({
     </div>`;
   }
 
-  const hasErrors = fusebaseError || jfrogError || jsmError || brokerJfrogError;
+  // ── ACEMQ BROKER SUPPORT (JSM) ──
+  const bsEmails = services.broker ? brokerSupportEmails(broker) : [];
+  if (bsEmails.length) {
+    const status = brokerJsmError ? err('Error') : brokerJsmResult ? ok('Provisioned') : na('Skipped');
+    const failRows = (brokerJsmResult?.failed || []).map(f => `
+      <tr><td style="padding:10px 12px;border-bottom:1px solid ${EM.hair};background:${EM.redTint};${EMF}font-size:13px;line-height:19px;color:${EM.redText};">${esc(f)}</td></tr>`).join('');
+
+    sections += `${sections ? emDivider() : ''}
+    <div>
+      ${emSectionHead('🛟 AceMQ Broker Support', status)}
+      ${emGap(12)}
+      ${emTable(`
+        ${row('Service Desk', esc(brokerJsmResult?.deskName || JIRA_BROKER_DESK_NAME), false)}
+        ${row('Portal URL', emLink(BROKER_SUPPORT_URL, esc(BROKER_SUPPORT_URL)), true)}
+        ${row('Org Name', esc(brokerJsmResult?.orgName || '—'), false)}
+        ${row('Org ID', esc(brokerJsmResult?.orgId || '—'), true)}
+        ${row('Org Created', brokerJsmResult ? (brokerJsmResult.orgCreated ? 'Yes (new)' : 'No (existing)') : '—', false)}
+        ${row('Users Added', brokerJsmResult ? String(brokerJsmResult.usersAdded.length) : '—', true)}
+        ${brokerJsmError ? row('Error', `<span style="color:${EM.redText};">${esc(brokerJsmError)}</span>`, false) : ''}
+      `)}
+      ${emGap(14)}
+      ${emTable(`
+        ${emHead(['Email'])}
+        ${bsEmails.map(e => `<tr>${emTd(esc(e), emAccent)}</tr>`).join('')}
+        ${failRows}
+      `)}
+      ${emGap(14)}
+      ${emSub('Login instructions sent to the customer')}
+      <ol style="margin:0;padding-left:20px;${EMF}font-size:13px;line-height:20px;color:${EM.sec};">${BROKER_SUPPORT_STEPS.map(t => `<li style="margin:0 0 6px;">${esc(t)}</li>`).join('')}</ol>
+    </div>`;
+  }
+
+  const hasErrors = fusebaseError || jfrogError || jsmError || brokerJfrogError || brokerJsmError;
 
   const summary = [
     ['Submitter', `${submitter.firstName} ${submitter.lastName} &lt;${submitter.email}&gt;`],
@@ -745,6 +795,23 @@ function buildCustomerEmailHtml({ submitter, company, services, engagementPartic
       ${emSub('Repository Access')}
       <p style="margin:0;${EMF}font-size:14px;line-height:22px;color:${EM.accent};">${users.map(esc).join('<br>')}</p>
       ${note(`Each person above will receive a separate email with their AceMQ Artifactory login for the AceMQ Broker project. Full documentation is at ${emLink('https://broker.acemq.com', 'broker.acemq.com')}.`)}
+    </div>`;
+  }
+
+  if (services.broker && brokerSupportEmails(broker).length) {
+    sectionsHtml += `${sectionsHtml ? emDivider() : ''}
+    <div>
+      ${emSectionHead('AceMQ Broker Support')}
+      ${emGap(12)}
+      ${emTable(`
+        ${emHead(['Email'])}
+        ${brokerSupportEmails(broker).map(e => `<tr>${emTd(esc(e), emAccent)}</tr>`).join('')}
+      `)}
+      ${emGap(22)}
+      ${emSub('How to log in')}
+      <ol style="margin:0;padding-left:20px;${EMF}font-size:14px;line-height:22px;color:${EM.sec};">${BROKER_SUPPORT_STEPS.map(t => `<li style="margin:0 0 8px;">${esc(t)}</li>`).join('')}</ol>
+      ${emGap(16)}
+      ${emButton(BROKER_SUPPORT_URL, 'Open AceMQ Broker Support →')}
     </div>`;
   }
 
@@ -1152,6 +1219,15 @@ async function buildReportPdf({
     }
   }
 
+  // ── ACEMQ BROKER SUPPORT ──
+  if (services.broker && brokerSupportEmails(broker).length) {
+    drawSectionBanner(sn++, 'ACEMQ BROKER SUPPORT');
+    drawSectionHead('Support Access');
+    drawGrid(['Email'], [1], brokerSupportEmails(broker).map((email) => [email]), 8.5);
+    drawSubHead('How to log in');
+    BROKER_SUPPORT_STEPS.forEach((t, i) => drawTextBlock(`${i + 1}. ${t}`));
+  }
+
   // ── SUPPORT ──
   if (services.support) {
     drawSectionBanner(sn++, 'SUPPORT SETUP');
@@ -1383,11 +1459,11 @@ async function jira(method, path, body) {
   return { status: res.status, data };
 }
 
-async function findJSMOrg(companyName) {
-  // Pages through all orgs on the service desk looking for a name match
+async function findJSMOrg(companyName, deskId = JIRA_SERVICE_DESK_ID, scope = `servicedesk/${deskId}/`) {
+  // Pages through all orgs on the service desk (or, with scope '', every org) looking for a name match
   let start = 0;
   while (true) {
-    const { data } = await jira('GET', `/rest/servicedeskapi/servicedesk/${JIRA_SERVICE_DESK_ID}/organization?start=${start}&limit=50`);
+    const { data } = await jira('GET', `/rest/servicedeskapi/${scope}organization?start=${start}&limit=50`);
     const values = data?.values || [];
     const match = values.find(o => o.name.toLowerCase() === companyName.toLowerCase());
     if (match) return match;
@@ -1396,11 +1472,21 @@ async function findJSMOrg(companyName) {
   }
 }
 
-async function createJSMOrg(companyName) {
+async function createJSMOrg(companyName, deskId = JIRA_SERVICE_DESK_ID) {
   // Create org then associate it with the service desk
   const { data: org } = await jira('POST', '/rest/servicedeskapi/organization', { name: companyName });
-  await jira('POST', `/rest/servicedeskapi/servicedesk/${JIRA_SERVICE_DESK_ID}/organization`, { organizationId: org.id });
+  await jira('POST', `/rest/servicedeskapi/servicedesk/${deskId}/organization`, { organizationId: org.id });
   return org;
+}
+
+// Org lookup that works across service desks: an org already on another desk is attached, not duplicated.
+async function ensureJSMOrg(companyName, deskId = JIRA_SERVICE_DESK_ID) {
+  const onDesk = await findJSMOrg(companyName, deskId);
+  if (onDesk) return { org: onDesk, created: false };
+  const existing = await findJSMOrg(companyName, deskId, '');
+  if (!existing) return { org: await createJSMOrg(companyName, deskId), created: true };
+  await jira('POST', `/rest/servicedeskapi/servicedesk/${deskId}/organization`, { organizationId: existing.id });
+  return { org: existing, created: false };
 }
 
 async function resolveJSMAccountId(email, fullName) {
@@ -1420,8 +1506,8 @@ async function addUsersToJSMOrg(orgId, users) {
   // users: array of { email, fullName } or plain email strings
   const normalized = users.map(u => typeof u === 'string' ? { email: u, fullName: u } : u);
   const accountIds = (await Promise.all(normalized.map(u => resolveJSMAccountId(u.email, u.fullName)))).filter(Boolean);
-  if (accountIds.length === 0) return;
-  await jira('POST', `/rest/servicedeskapi/organization/${orgId}/user`, { accountIds });
+  if (accountIds.length > 0) await jira('POST', `/rest/servicedeskapi/organization/${orgId}/user`, { accountIds });
+  return accountIds;
 }
 
 async function provisionJSMAccess({ company, submitterEmail, portalUsers, supportUsers }) {
@@ -1442,15 +1528,30 @@ async function provisionJSMAccess({ company, submitterEmail, portalUsers, suppor
 
   const emails = users.map(u => u.email);
 
-  let org = await findJSMOrg(company);
-  const orgCreated = !org;
-  if (!org) {
-    org = await createJSMOrg(company);
-  }
+  const { org, created: orgCreated } = await ensureJSMOrg(company);
 
   await addUsersToJSMOrg(org.id, users);
 
   return { orgId: org.id, orgName: org.name, orgCreated, usersAdded: emails };
+}
+
+// AceMQ Broker Support service desk: same org-per-customer logic as above, on the broker desk.
+// Reuses the customer's existing org when they also chose Support; users join the org and the desk.
+async function provisionBrokerSupport({ company, emails }) {
+  const { data: desk } = await jira('GET', `/rest/servicedeskapi/servicedesk/${JIRA_BROKER_DESK_ID}`);
+  if (desk?.projectName !== JIRA_BROKER_DESK_NAME) throw new Error(`Service desk ${JIRA_BROKER_DESK_ID} is not "${JIRA_BROKER_DESK_NAME}"`);
+
+  // Emails become Jira customers — reject anything that isn't a plain address, and cap one submission.
+  const valid  = emails.filter(e => EMAIL_RE.test(e));
+  const failed = emails.filter(e => !EMAIL_RE.test(e)).map(e => `${e}: invalid email`);
+  if (valid.length > MAX_JFROG_USERS) throw new Error(`Too many users (${valid.length}); max ${MAX_JFROG_USERS} per submission`);
+
+  const { org, created: orgCreated } = await ensureJSMOrg(company.trim(), JIRA_BROKER_DESK_ID);
+  const accountIds = await addUsersToJSMOrg(org.id, valid.map(e => ({ email: e.toLowerCase(), fullName: e })));
+  if (accountIds.length > 0) await jira('POST', `/rest/servicedeskapi/servicedesk/${JIRA_BROKER_DESK_ID}/customer`, { accountIds });
+  if (accountIds.length < valid.length) failed.push(`${valid.length - accountIds.length} user(s) could not be created in Jira`);
+
+  return { deskId: desk.id, deskName: desk.projectName, portalUrl: BROKER_SUPPORT_URL, orgId: org.id, orgName: org.name, orgCreated, usersAdded: valid, failed };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1724,6 +1825,7 @@ export async function POST(request) {
     let jsmResult      = null, jsmError      = null;
     let clickupResult  = null, clickupError  = null;
     let brokerJfrogResult = null, brokerJfrogError = null;
+    let brokerJsmResult = null, brokerJsmError = null;
 
     // ClickUp — move/create the onboarding pipeline task for each selected service
     if (CLICKUP_TOKEN) {
@@ -1807,6 +1909,19 @@ export async function POST(request) {
       }
     }
 
+    // JSM — AceMQ Broker Support service desk (runs after the support block so its org is reused)
+    if (services.broker && JIRA_API_TOKEN && brokerSupportEmails(broker).length) {
+      try {
+        brokerJsmResult = await provisionBrokerSupport({ company, emails: brokerSupportEmails(broker) });
+        brokerJsmResult.failed.forEach(f => errors.push(`JSM Broker Support: ${f}`));
+        console.log(`JSM Broker Support: desk=${brokerJsmResult.deskId} org="${brokerJsmResult.orgName}" id=${brokerJsmResult.orgId} created=${brokerJsmResult.orgCreated} users=${brokerJsmResult.usersAdded.length}`);
+      } catch (bsErr) {
+        console.error('JSM broker support provisioning error:', bsErr);
+        brokerJsmError = bsErr.message;
+        errors.push(`JSM Broker Support: ${bsErr.message}`);
+      }
+    }
+
     // ── Internal team email — one comprehensive email with all results ──
     try {
       const selectedServices = [
@@ -1827,7 +1942,7 @@ export async function POST(request) {
           fusebaseResult, fusebaseError,
           jfrogResult, jfrogError,
           jsmResult, jsmError,
-          broker, brokerJfrogResult, brokerJfrogError,
+          broker, brokerJfrogResult, brokerJfrogError, brokerJsmResult, brokerJsmError,
           pdfGenerated: !!pdfBase64,
         }),
         pdfBase64,
